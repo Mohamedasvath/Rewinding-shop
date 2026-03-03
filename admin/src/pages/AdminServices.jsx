@@ -227,7 +227,7 @@ export default function AdminServices() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-            <Settings className="text-blue-600" size={28}/> WORKSHOP OS
+            <Settings className="text-blue-600" size={28}/> SERVICE MANAGMENT
           </h1>
           <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">Service Management System v2.4</p>
         </div>
