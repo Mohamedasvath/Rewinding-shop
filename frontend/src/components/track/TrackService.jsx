@@ -45,7 +45,7 @@ export default function UserTrackStatus() {
 
       <nav className="relative z-10 border-b border-white/5 py-6 px-4 md:px-6 text-center backdrop-blur-xl bg-black/40 sticky top-0">
         <h1 className="text-xl md:text-2xl font-black italic tracking-tighter uppercase text-white">
-          Senthil <span className="text-blue-600">Rewinding</span> Works.
+           <span className="text-blue-600"></span> 
         </h1>
       </nav>
 
