@@ -1,138 +1,136 @@
 import { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
-import { Wrench, Search, Info, ClipboardList, Cog } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { NavLink, useLocation } from "react-router-dom";
+import { Search, Info, ClipboardList, Cog, Home, Menu, X, Wrench } from "lucide-react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
 
-  // Scroll pannumpo navbar style mathurathukku
+  // Scroll logic
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close menu on route change
+  useEffect(() => {
+    setOpen(false);
+    document.body.style.overflow = "unset";
+  }, [location.pathname]);
+
+  // Handle body scroll when menu is open
+  const toggleMenu = () => {
+    const nextState = !open;
+    setOpen(nextState);
+    document.body.style.overflow = nextState ? "hidden" : "unset";
+  };
+
   const links = [
-    { name: "Home", path: "/", icon: Wrench },
+    { name: "Home", path: "/", icon: Home },
     { name: "Request", path: "/request", icon: ClipboardList },
     { name: "Track", path: "/track", icon: Search },
     { name: "About", path: "/about", icon: Info }
   ];
 
   return (
-    <nav 
-      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 px-4 py-3 
-      ${scrolled ? "bg-white/80 backdrop-blur-xl border-b shadow-sm py-2" : "bg-transparent py-4"}`}
-    >
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        
-        {/* LOGO SECTION */}
-        <div className="flex items-center gap-3 group cursor-pointer">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-            className="text-blue-600 bg-blue-50 p-1.5 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-500"
-          >
-            <Cog size={24}/>
-          </motion.div>
-          <h1 className="text-xl font-black tracking-tighter uppercase text-white">
-            SRW <span className="text-blue-600"></span>
-          </h1>
-        </div>
+    <div className="relative font-sans antialiased">
+      {/* MAIN HEADER */}
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-[50] transition-all duration-300 
+        ${scrolled || open ? "bg-white shadow-md border-b border-gray-100 py-3" : "bg-transparent py-5"}`}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+          
+          {/* LOGO */}
+          <NavLink to="/" className="flex items-center gap-2 relative z-[60]">
+            <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg">
+              <Cog size={20} className="text-white animate-spin" style={{ animationDuration: '8s' }} />
+            </div>
+            <span className={`text-xl font-black tracking-tighter uppercase transition-colors duration-300 ${scrolled || open ? "text-slate-900" : "text-white"}`}>
+              SR<span className="text-blue-600 italic">W</span>
+            </span>
+          </NavLink>
 
-        {/* DESKTOP MENU - Pill Shape Style */}
-        <div className="hidden md:flex items-center bg-gray-100/50 p-1 rounded-full border border-gray-200/50">
-          {links.map(link => {
-            const Icon = link.icon;
-            return (
+          {/* DESKTOP NAV */}
+          <div className="hidden md:flex items-center gap-8">
+            {links.map((link) => (
               <NavLink 
                 key={link.path} 
                 to={link.path} 
                 className={({ isActive }) => 
-                  `relative flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold tracking-wide transition-all duration-300
-                  ${isActive ? "text-white" : "text-gray-600 hover:text-blue-600"}`
+                  `text-xs font-black uppercase tracking-[2px] transition-all duration-300
+                  ${isActive ? "text-blue-600 scale-105" : scrolled ? "text-slate-600 hover:text-blue-600" : "text-white/80 hover:text-white"}`
                 }
               >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={16} className="relative z-10" />
-                    <span className="relative z-10">{link.name}</span>
-                    {isActive && (
-                      <motion.div
-                        layoutId="activePill"
-                        className="absolute inset-0 bg-blue-600 rounded-full shadow-lg shadow-blue-500/30"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </>
-                )}
+                {link.name}
               </NavLink>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* MOBILE TOGGLE - Ithu mattum thaan main nav-la irukkum */}
+          <button
+            aria-label="Toggle Menu"
+            className={`md:hidden p-2 rounded-xl transition-all active:scale-90
+            ${scrolled || open ? "bg-slate-100 text-slate-900" : "bg-white/10 text-white backdrop-blur-md"}`}
+            onClick={toggleMenu}
+          >
+            {open ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      <div 
+        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] transition-opacity duration-300 md:hidden
+        ${open ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        onClick={toggleMenu}
+      />
+
+      {/* SIDEBAR CONTAINER */}
+      <div
+        className={`fixed top-0 left-0 bottom-0 w-[80%] max-w-[300px] bg-white z-[110] shadow-2xl transition-transform duration-300 ease-out md:hidden flex flex-col
+        ${open ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        {/* Sidebar Top Section */}
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <Wrench size={18} className="text-blue-600" />
+            <span className="font-black text-slate-900 uppercase tracking-tighter">Menu</span>
+          </div>
+          {/* Optional: Inner close button if you want double safety */}
+          <button onClick={toggleMenu} className="p-1 text-slate-400 hover:text-slate-900 md:hidden">
+            <X size={20} />
+          </button>
         </div>
 
-        {/* MODERN HAMBURGER BUTTON */}
-        <button
-          className="md:hidden relative z-[110] w-10 h-10 flex flex-col justify-center items-center gap-1.5 bg-gray-100 rounded-full"
-          onClick={() => setOpen(!open)}
-        >
-          <motion.span 
-            animate={open ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
-            className="w-5 h-0.5 bg-black rounded-full block origin-center"
-          />
-          <motion.span 
-            animate={open ? { opacity: 0, x: -10 } : { opacity: 1, x: 0 }}
-            className="w-5 h-0.5 bg-black rounded-full block"
-          />
-          <motion.span 
-            animate={open ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
-            className="w-5 h-0.5 bg-black rounded-full block origin-center"
-          />
-        </button>
-      </div>
+        {/* Links List */}
+        <div className="flex-1 overflow-y-auto p-4 py-6 space-y-2">
+          {links.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              onClick={toggleMenu}
+              className={({ isActive }) =>
+                `flex items-center gap-4 p-4 rounded-2xl text-sm font-bold transition-all
+                ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "text-slate-600 active:bg-slate-100"}`
+              }
+            >
+              <link.icon size={20} />
+              {link.name}
+            </NavLink>
+          ))}
+        </div>
 
-      {/* MOBILE FULL SCREEN MENU REVEAL */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden absolute top-0 left-0 right-0 bg-white border-b shadow-2xl overflow-hidden pt-20 pb-10 px-6 z-[105]"
-          >
-            <div className="flex flex-col space-y-4">
-              {links.map((link, i) => {
-                const Icon = link.icon;
-                return (
-                  <motion.div
-                    key={link.path}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <NavLink
-                      to={link.path}
-                      onClick={() => setOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center justify-between px-6 py-4 rounded-2xl font-black uppercase tracking-widest transition-all
-                        ${isActive ? "bg-blue-600 text-white shadow-xl shadow-blue-200" : "bg-gray-50 text-gray-700 active:scale-95"}`
-                      }
-                    >
-                      <div className="flex items-center gap-4">
-                        <Icon size={20}/>
-                        {link.name}
-                      </div>
-                      <div className="w-2 h-2 rounded-full bg-current opacity-30" />
-                    </NavLink>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+        {/* Sidebar Footer */}
+        <div className="p-6 bg-slate-50 border-t border-slate-100">
+           <div className="flex flex-col gap-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[3px]">Senthil Rewind Works</p>
+              <p className="text-[9px] text-blue-600 font-bold italic uppercase">Quality Motor Services</p>
+           </div>
+        </div>
+      </div>
+    </div>
   );
 }
