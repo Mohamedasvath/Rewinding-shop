@@ -66,7 +66,7 @@ export default function ResponsiveAwardLanding() {
             initial={{y:50, opacity:0}} 
             animate={{y:0, opacity:1}} 
             transition={{duration:1}} 
-            className="text-[11vw] md:text-[8vw] font-[1000] italic tracking-tighter uppercase leading-[0.85] mb-6"
+            className="text-[11vw] md:text-[6vw] font-[1000] italic tracking-tighter uppercase leading-[0.85] mb-6"
           >
             SENTHIL <br/> <span className="text-blue-600">REWINDING WORKS.</span>
           </motion.h1>
@@ -140,7 +140,7 @@ export default function ResponsiveAwardLanding() {
 
       {/* 4. PARALLAX TEXT */}
       <div className="py-10 md:py-20 overflow-hidden whitespace-nowrap border-y border-white/5">
-        <h2 className="scrolling-text text-[15vw] md:text-[8rem] font-black text-white uppercase leading-none">
+        <h2 className="scrolling-text text-[15vw] md:text-[6rem] font-black text-white uppercase leading-none">
           Precision • Reliability • Excellence • Power • 
         </h2>
       </div>
