@@ -1,4 +1,4 @@
-import DChallan from "../models/DChallan.js";
+import DChallan from "../models/DChallan.js"
 
 /* ───────── CREATE ───────── */
 export const createChallan = async (req, res) => {
