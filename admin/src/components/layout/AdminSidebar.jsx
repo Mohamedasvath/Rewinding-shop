@@ -8,7 +8,8 @@ import {
   X,
   ChevronRight,
   FileSearch,
-  ClipboardCheck
+  ClipboardCheck,
+  Package
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,7 +48,7 @@ export default function AdminSidebar({ open, setOpen }) {
       <aside
         className={`
           fixed top-0 left-0 z-50
-          w-72 h-screen
+         w-[85%] max-w-[280px] h-screen
           bg-white border-r border-slate-200
           flex flex-col
           transform transition-transform duration-300 ease-in-out
@@ -95,10 +96,12 @@ export default function AdminSidebar({ open, setOpen }) {
             </p>
             <SidebarItem to="/admin/quality-records" icon={<ClipboardCheck size={20} />} text="Quality Records" onClick={closeMobile} />
             <SidebarItem to="/admin/quality-view" icon={<FileSearch size={20} />} text="Q-Record View" onClick={closeMobile} />
+              <SidebarItem to="/admin/d-challan" icon={<Package size={20} />} text="D-challan" onClick={closeMobile} />
           </div>
 
           <div className="pt-6 ">
             <SidebarItem to="/admin/settings" icon={<Settings size={20} />} text="System Settings" onClick={closeMobile} />
+            
           </div>
         </nav>
 

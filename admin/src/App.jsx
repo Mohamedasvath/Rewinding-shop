@@ -9,6 +9,7 @@ import AllCustomers from "./pages/AllCustomers";
 import AdminSettings from "./pages/AdminSettings";
 import AdminQualityRecordForm from "./pages/AdminQualityRecordForm";
 import QualityRecordView from "./pages/QualityRecordView";
+import AdminDChallan from "./pages/AdminChallan";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="quality-records" element={<AdminQualityRecordForm />} />
         <Route path="quality-view" element={<QualityRecordView />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="d-challan" element={<AdminDChallan/>} />
       </Route>
     </Routes>
   );

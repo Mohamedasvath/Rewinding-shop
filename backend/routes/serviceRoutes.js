@@ -8,7 +8,8 @@ import {
   updateQualityRecords,
   createAdminMessage,
   markMessageSent,
-  generateChallan
+  generateChallan,
+  
 } from "../controllers/adminServiceController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -26,6 +27,7 @@ router.delete("/:id", protect, removeService);
 router.put("/:id/quality", protect, updateQualityRecords);
 router.post("/:id/message", protect, createAdminMessage);
 router.put("/message/:msgId/sent", protect, markMessageSent);
+
 
 /* DELIVERY CHALLAN */
 router.get("/challan/:id", protect, generateChallan);

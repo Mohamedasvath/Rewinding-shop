@@ -7,24 +7,22 @@ import PDFDocument from "pdfkit";
 ========================================================= */
 export const createService = async (req, res, next) => {
   try {
-    const {
-      srfNumber,
-      trackingCode,
-      customerName,
-      address,
-      phone,
-      gstNumber,
-      make,
-      hp,
-      rpm,
-      serialNumber,
-      gatePassNumber,
-      problem,
-      stage,
-      technician,
-      date   // ✅ added
-    } = req.body;
 
+   const {
+  srfNumber,
+  trackingCode,
+  customerName,
+  address,
+  phone,
+  gstNumber,
+  technician,
+  stage,
+  date,
+  natureOfComplaint,
+  sparesReceived,
+  motorDetails,
+  problem
+} = req.body;
     /* BASIC VALIDATION */
     if (!srfNumber || !trackingCode) {
       return res.status(400).json({
@@ -32,23 +30,43 @@ export const createService = async (req, res, next) => {
       });
     }
 
+    /* SAFE PARSE — handles cases where motorDetails arrives as a JSON string
+       (e.g. multipart/form-data or incorrect Content-Type from client)        */
+    let parsedMotorDetails = motorDetails;
+    if (typeof motorDetails === "string") {
+      try {
+        parsedMotorDetails = JSON.parse(motorDetails);
+      } catch {
+        parsedMotorDetails = {};
+      }
+    }
+
     const service = await Service.create({
       srfNumber,
-      trackingCode,
+     trackingCode: trackingCode.trim().toUpperCase(),
       customerName,
       address,
       phone,
       gstNumber,
 
-      motorDetails: {
-        make,
-        hp,
-        rpm,
-        serialNumber,
-        gatePassNumber
-      },
+     motorDetails: {
+  make: parsedMotorDetails?.make,
+  hp: parsedMotorDetails?.hp,
+  kw: parsedMotorDetails?.kw,
+  volts: parsedMotorDetails?.volts,
+  amps: parsedMotorDetails?.amps,
+  phase: parsedMotorDetails?.phase,
+  rpm: parsedMotorDetails?.rpm,
+  type: parsedMotorDetails?.type,
+  ins: parsedMotorDetails?.ins,
+  frame: parsedMotorDetails?.frame,
+  serialNumber: parsedMotorDetails?.serialNumber,
+  gatePassNumber: parsedMotorDetails?.gatePassNumber
+},
 
       problemIdentity: problem,
+      natureOfComplaint: natureOfComplaint || "",
+      sparesReceived: sparesReceived || "",
       stage: stage || "Received",
       technician: technician || "",
 
@@ -66,24 +84,42 @@ export const createService = async (req, res, next) => {
    USER TRACK (MULTIPLE MOTORS SUPPORT)
 ========================================================= */
 
-export const trackService = async (req, res, next) => {
+export const trackService = async (req, res) => {
   try {
-    const searchCode = req.params.code;
+    const searchCode = req.params.code?.trim();
+
     console.log("Searching for code:", searchCode);
 
-    // trackingCode moolam search panrom
+    if (!searchCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Tracking code is required",
+      });
+    }
+
     const service = await Service.findOne({
-      trackingCode: searchCode
+      trackingCode: { $regex: `^${searchCode}$`, $options: "i" }
     });
 
     if (!service) {
-      return res.status(404).json({ message: "Record not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Record not found",
+      });
     }
 
-    res.json(service);
+    // 🔥 IMPORTANT
+    return res.status(200).json({
+      success: true,
+      data: service,
+    });
+
   } catch (err) {
     console.error("Backend Error:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
 /* =========================================================
@@ -122,22 +158,31 @@ export const updateService = async (req, res, next) => {
 
     service.problemIdentity = req.body.problem ?? service.problemIdentity;
     service.technician = req.body.technician ?? service.technician;
+    service.natureOfComplaint = req.body.natureOfComplaint ?? service.natureOfComplaint;
+    service.sparesReceived = req.body.sparesReceived ?? service.sparesReceived;
 
-    /* UPDATE MOTOR DETAILS SAFELY */
-    if (req.body.make !== undefined)
-      service.motorDetails.make = req.body.make;
-
-    if (req.body.hp !== undefined)
-      service.motorDetails.hp = req.body.hp;
-
-    if (req.body.rpm !== undefined)
-      service.motorDetails.rpm = req.body.rpm;
-
-    if (req.body.serialNumber !== undefined)
-      service.motorDetails.serialNumber = req.body.serialNumber;
-
-    if (req.body.gatePassNumber !== undefined)
-      service.motorDetails.gatePassNumber = req.body.gatePassNumber;
+    /* UPDATE MOTOR DETAILS SAFELY - handle full motorDetails object from frontend */
+    if (req.body.motorDetails && typeof req.body.motorDetails === "object") {
+      const md = req.body.motorDetails;
+      service.motorDetails.make          = md.make          ?? service.motorDetails.make;
+      service.motorDetails.hp            = md.hp            ?? service.motorDetails.hp;
+      service.motorDetails.kw            = md.kw            ?? service.motorDetails.kw;
+      service.motorDetails.volts         = md.volts         ?? service.motorDetails.volts;
+      service.motorDetails.amps          = md.amps          ?? service.motorDetails.amps;
+      service.motorDetails.phase         = md.phase         ?? service.motorDetails.phase;
+      service.motorDetails.rpm           = md.rpm           ?? service.motorDetails.rpm;
+      service.motorDetails.type          = md.type          ?? service.motorDetails.type;
+      service.motorDetails.ins           = md.ins           ?? service.motorDetails.ins;
+      service.motorDetails.frame         = md.frame         ?? service.motorDetails.frame;
+      service.motorDetails.serialNumber  = md.serialNumber  ?? service.motorDetails.serialNumber;
+      service.motorDetails.gatePassNumber= md.gatePassNumber?? service.motorDetails.gatePassNumber;
+    } else {
+      if (req.body.make !== undefined) service.motorDetails.make = req.body.make;
+      if (req.body.hp   !== undefined) service.motorDetails.hp   = req.body.hp;
+      if (req.body.rpm  !== undefined) service.motorDetails.rpm  = req.body.rpm;
+      if (req.body.serialNumber   !== undefined) service.motorDetails.serialNumber   = req.body.serialNumber;
+      if (req.body.gatePassNumber !== undefined) service.motorDetails.gatePassNumber = req.body.gatePassNumber;
+    }
 
     if (req.body.date !== undefined) {
   service.updatedDate = req.body.date;

@@ -3,9 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, User, Wrench, Clock, Hash, Cpu, Loader2, Cog, 
   ShieldCheck, Activity, CheckCircle2, PhoneCall, FileText, 
-  ArrowRight, Timer, Truck, Award, Zap, HardHat
+  Truck, Award, Zap, HardHat, Download
 } from "lucide-react";
-import api from "../../api/api";
+import axios from "axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+const BACKEND = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export default function UserTrackStatus() {
   const [trackId, setTrackId] = useState("");
@@ -21,18 +25,170 @@ export default function UserTrackStatus() {
     setStatusData([]);
 
     try {
-      const response = await api.get(`/service/track/${trackId.trim()}`);
-      const data = Array.isArray(response.data) ? response.data : [response.data];
-      if (data.length > 0 && data[0]) {
-        setStatusData(data);
-      } else {
-        setError("Protocol ID not found in system.");
-      }
+      const response = await axios.get(
+        `${BACKEND}/service/track/${trackId.trim()}`
+      );
+      const raw = response.data;
+
+      // Unwrap all possible shapes
+      let record = null;
+      if (raw?.data && raw.data._id)              record = raw.data;       // { success, data:{} }
+      else if (raw?._id)                           record = raw;            // flat object
+      else if (Array.isArray(raw) && raw[0]?._id) record = raw[0];         // array
+      else if (Array.isArray(raw?.data))           record = raw.data[0];   // { data:[] }
+
+      if (!record) { setError("No record found for this tracking ID."); return; }
+      setStatusData([record]);
+
     } catch (err) {
-      setError("Invalid ID. Verification failed.");
+      if (err?.response?.status === 404) {
+        setError("No record found for this tracking ID.");
+      } else {
+        setError("Server error. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  /* ── PDF REPORT ── */
+  const generateReport = (motor) => {
+    const doc  = new jsPDF("p", "mm", "a4");
+    const pw   = doc.internal.pageSize.getWidth();
+    const md   = motor.motorDetails || {};
+
+    /* Header band */
+    doc.setFillColor(15, 15, 15);
+    doc.rect(0, 0, pw, 36, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text("SENTHIL REWINDING WORKS", pw / 2, 13, { align: "center" });
+    doc.setFontSize(9);
+    doc.setTextColor(99, 179, 237);
+    doc.text("SERVICE TRACKING REPORT", pw / 2, 21, { align: "center" });
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${new Date().toLocaleString("en-IN")}`, pw / 2, 28, { align: "center" });
+
+    /* Blue accent line */
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(1.2);
+    doc.line(14, 36, pw - 14, 36);
+
+    let y = 44;
+
+    /* ── Customer & Service Info ── */
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text("SERVICE INFORMATION", 14, y); y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, valign: "middle", lineColor: [226, 232, 240] },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 8 },
+      columnStyles: {
+        0: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 45 },
+        2: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 45 },
+      },
+      body: [
+        ["SRF Number",    motor.srfNumber    || "—",  "Tracking Code", motor.trackingCode || "—"],
+        ["Customer",      motor.customerName || "—",  "Phone",         motor.phone        || "—"],
+        ["Address",       { content: motor.address || "—", colSpan: 3 }],
+        ["Status",        motor.stage        || "—",  "Technician",    motor.technician   || "Allocating..."],
+        ["Date",          motor.updatedDate
+                            ? new Date(motor.updatedDate).toLocaleDateString("en-IN")
+                            : motor.createdAt
+                            ? new Date(motor.createdAt).toLocaleDateString("en-IN")
+                            : "—",             "SRF / Work Order", motor.srfNumber || "—"],
+      ],
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    /* ── Motor Details ── */
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text("MOTOR SPECIFICATIONS", 14, y); y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, valign: "middle", lineColor: [226, 232, 240] },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontSize: 8 },
+      head: [["Make", "HP", "KW", "RPM", "Volts", "Amps", "Phase", "Type", "Ins.", "Frame"]],
+      body: [[
+        md.make  || "—", md.hp    || "—", md.kw    || "—", md.rpm   || "—",
+        md.volts || "—", md.amps  || "—", md.phase || "—", md.type  || "—",
+        md.ins   || "—", md.frame || "—",
+      ]],
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    /* Serial + Gate Pass */
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, lineColor: [226, 232, 240] },
+      columnStyles: {
+        0: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 45 },
+        2: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 45 },
+      },
+      body: [
+        ["Serial Number", md.serialNumber || "—", "Gate Pass No.", md.gatePassNumber || "—"],
+      ],
+      margin: { left: 14, right: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    /* ── Complaint & Spares ── */
+    if (motor.natureOfComplaint || motor.sparesReceived) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text("COMPLAINT & SPARES", 14, y); y += 3;
+
+      autoTable(doc, {
+        startY: y,
+        theme: "grid",
+        styles: { fontSize: 8, cellPadding: 3, lineColor: [226, 232, 240] },
+        columnStyles: { 0: { fontStyle: "bold", fillColor: [248, 250, 252], cellWidth: 45 } },
+        body: [
+          ["Nature of Complaint", motor.natureOfComplaint || "—"],
+          ["Spares Received",     motor.sparesReceived    || "—"],
+        ],
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    }
+
+    /* ── Signature block ── */
+    const sigY = Math.max(y + 16, 255);
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(14,  sigY, 75,  sigY);
+    doc.line(135, sigY, 196, sigY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Customer Signature",     14,  sigY + 5);
+    doc.text("Authorized Signature",   135, sigY + 5);
+
+    /* ── Footer ── */
+    const ph = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.4);
+    doc.line(14, ph - 12, pw - 14, ph - 12);
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Senthil Rewinding Works — Official Service Report", 14, ph - 7);
+    doc.text(`Tracking: ${motor.trackingCode || "—"}`, pw - 14, ph - 7, { align: "right" });
+
+    doc.save(`SRW_Report_${motor.srfNumber || motor.trackingCode || "export"}.pdf`);
   };
 
   return (
@@ -61,11 +217,11 @@ export default function UserTrackStatus() {
           </motion.div>
 
           <form onSubmit={handleTrack} className="relative max-w-lg mx-auto mt-8 md:mt-10 px-2">
-            <div className="relative flex items-center bg-[#0A0A0A] border border-white/10 rounded-2xl focus-within:border-blue-600 transition-all p-1.5 shadow-2xl">
+            <div className="relative flex text-w items-center bg-[#0A0A0A] border border-white/10 rounded-2xl focus-within:border-blue-600 transition-all p-1.5 shadow-2xl">
               <input
                 type="text"
                 placeholder="TRACKING CODE"
-                className="w-full px-4 md:px-6 py-3 md:py-4 bg-transparent outline-none font-black text-base md:text-xl placeholder:opacity-20 uppercase tracking-widest"
+                className="placeholder-white w-full px-4 md:px-6 py-3 md:py-4 bg-transparent outline-none font-black text-base md:text-xl placeholder:opacity-50 uppercase tracking-widest"
                 value={trackId}
                 onChange={(e) => setTrackId(e.target.value)}
               />
@@ -103,19 +259,19 @@ export default function UserTrackStatus() {
                   
                   <div className="text-center md:text-left z-10 w-full">
                     <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
-                       <span className="bg-white/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Live Feed</span>
+                       <span className="bg-white/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Work Status</span>
                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     </div>
                     <h3 className="text-4xl md:text-7xl font-black italic uppercase leading-none mb-4 tracking-tighter">
                       {motor.stage || "In Analysis"}
                     </h3>
                     <div className="flex items-center justify-center md:justify-start gap-3 text-xs font-bold opacity-90 uppercase bg-black/20 w-full md:w-fit px-5 py-3 rounded-xl">
-                      <User size={16} className="text-blue-200" /> {motor.customerName || "No Name"}
+                      <User size={16} className="text-white" /> {motor.customerName || "No Name"}
                     </div>
                   </div>
 
                   <div className="bg-black/30 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 md:p-8 text-center w-full md:min-w-[220px] md:w-auto z-10">
-                    <p className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-50 text-blue-200">Protocol Registry</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest mb-1 opacity-50 text-blue-200">SRF Number</p>
                     <h4 className="text-3xl md:text-4xl font-black italic tracking-tighter">
                       #{motor.srfNumber || motor.trackingCode || "N/A"}
                     </h4>
@@ -130,26 +286,22 @@ export default function UserTrackStatus() {
                   <SpecCard icon={<Clock/>} label="In-Date" value={motor.createdAt ? new Date(motor.createdAt).toLocaleDateString() : "N/A"} />
                 </div>
 
-                {/* 3. QUALITY CHECKLIST (Horizontal Scroll on Mobile) */}
-                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                    <StatusBadge icon={<CheckCircle2 size={14}/>} text="Insulation: OK" active />
-                    <StatusBadge icon={<Zap size={14}/>} text="Winding: Active" active />
-                    <StatusBadge icon={<Activity size={14}/>} text="Balancing: QC" />
-                </div>
-
-                {/* 4. ACTION FOOTER */}
+                {/* 3. ACTION FOOTER */}
                 <div className="flex flex-col gap-4 pt-8 border-t border-white/10">
                     <div className="flex items-center gap-3 justify-center md:justify-start">
                         <ShieldCheck className="text-emerald-500" size={20} />
                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none text-center">
-                            Identity Secured by <span className="text-white italic">Workshop OS</span>
+                            Identity Secured by <span className="text-white italic">Senthil Rewinding </span>
                         </p>
                     </div>
                     <div className="flex gap-3 w-full">
-                        <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10">
-                            <FileText size={16}/> Report
+                        <button
+                          onClick={() => generateReport(motor)}
+                          className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                        >
+                            <Download size={16}/> Download Report
                         </button>
-                        <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">
+                        <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all">
                             <PhoneCall size={16}/> Support
                         </button>
                     </div>
@@ -209,18 +361,6 @@ function SpecCard({ icon, label, value }) {
                 <p className="text-[8px] md:text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{label}</p>
                 <p className="text-lg md:text-2xl font-black italic uppercase text-white truncate leading-none">{value}</p>
             </div>
-        </div>
-    );
-}
-
-// Sub-component for Checklist Badges
-function StatusBadge({ icon, text, active = false }) {
-    return (
-        <div className={`flex items-center gap-2 px-4 py-3 rounded-full border whitespace-nowrap transition-colors ${
-            active ? "bg-blue-600/10 border-blue-600/50 text-blue-400" : "bg-white/5 border-white/5 text-gray-500"
-        }`}>
-            {icon}
-            <span className="text-[9px] font-black uppercase tracking-widest">{text}</span>
         </div>
     );
 }

@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
+import dChallanRoutes from "./routes/dChallanRoutes.js";
 
 //
 
@@ -33,6 +34,7 @@ app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/technicians", technicianRoutes);
 app.use("/api/status", statusRoutes);
 app.use("/api/quality-record", qualityRecordRoutes);
+app.use("/api/dchallan", dChallanRoutes);
 
 
 app.get("/", (req, res) => {

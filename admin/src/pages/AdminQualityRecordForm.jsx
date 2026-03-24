@@ -1,347 +1,740 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
 import { toast } from "react-toastify";
-import { 
-  Save, Upload, Loader2, Edit3, Trash2, FileText, 
-  Download, XCircle, Plus, X, LayoutGrid, FilePlus2 
+import {
+  Save, Upload, Loader2, Edit3, Trash2, FileText,
+  Download, X, LayoutGrid, FilePlus2, ChevronDown, ChevronUp
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useLocation, useNavigate } from "react-router-dom";
 
+/* ─────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────── */
+const SectionTitle = ({ children }) => (
+  <div className="bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 border border-blue-800">
+    {children}
+  </div>
+);
+
+const FieldRow = ({ label, children, half }) => (
+  <div className={`flex items-center border-b border-blue-100 min-h-[28px] ${half ? "" : ""}`}>
+    <span className="text-[10px] font-bold text-slate-600 uppercase w-[120px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">
+      {label}
+    </span>
+    <div className="flex-1 px-2 py-0.5">{children}</div>
+  </div>
+);
+
+const FInput = ({ value, onChange, type = "text", placeholder = "" }) => (
+  <input
+    type={type}
+    value={value || ""}
+    onChange={onChange}
+    placeholder={placeholder}
+    className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-300"
+  />
+);
+
+const FTextarea = ({ value, onChange, rows = 3, placeholder = "" }) => (
+  <textarea
+    value={value || ""}
+    onChange={onChange}
+    rows={rows}
+    placeholder={placeholder}
+    className="w-full text-[11px] bg-transparent outline-none resize-none text-slate-800 placeholder-slate-300 py-0.5"
+  />
+);
+
+/* ══════════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════════ */
 export default function AdminQualityRecordForm() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  /* ─── INITIAL STATE — exact schema keys ─── */
   const initialState = {
     companyName: "",
+    address: "",
     srfNumber: "",
     date: "",
     partyGPNumber: "",
+    partyGPDate: "",
+    dNoteNumber: "",
+    dNoteDate: "",
+    billNo: "",
+    billDate: "",
     serialNumber: "",
-    motorDetails: { make: "", hp: "", kw: "", volts: "", phase: "", rpm: "", serialNumber: "" },
-    windingDetails: { swg: "", slot: "", winding: "", pitch: "", turns: "", totalCoils: "", totalMeter: "" },
+
+    inspectionTesting: {
+      make: "", hp: "", kw: "", amps: "", volts: "", phase: "", rpm: "",
+      insulation: "", connection: "", frame: "", type: "", slNo: "",
+      exV: "", exA: "",
+    },
+
+    coreDetails: {
+      coreLength: "", coreDia: "", rotorLength: "", rotorPerimeter: "",
+    },
+
+    conditionDetails: {
+      bearingNo: "", driveEndBearing: "", nonDriveEndBearing: "",
+      endShieldCondition: "", driveEndCondition: "", nonDriveEndCondition: "",
+      shaftDriveEnd: "", shaftNonDriveEnd: "",
+      growlerTest: "", rotor: "", statorCoil: "", rotorPosition: "", airGap: "",
+    },
+
+    paperDetails: {
+      slotL: "", slotB: "", centre: "", top: "", separate: "",
+    },
+
+    windingDetails: {
+      swg: "", slot: "", winding: "", pitch: "", turns: "",
+      totalCoils: "", totalMeter: "", materialEstimate: "", windingType: "",
+    },
+
     mechanicalWorkDone: "",
     causeOfFailure: "",
-    assemblingTesting: { hvTest: "", runningTime: "", temperature: "" },
+
+    processDetails: {
+      dismantled: "", wireRemoved: "", rewound: "", assembled: "",
+    },
+
+    assemblingTesting: {
+      hvTest: "", runningTime: "", temperature: "",
+      noLoadVoltageL1: "", noLoadVoltageL2: "", noLoadVoltageL3: "",
+      noLoadAmpsL1: "", noLoadAmpsL2: "", noLoadAmpsL3: "",
+      drumSize: "", rpm: "",
+    },
+
     loadTesting: Array.from({ length: 5 }, () => ({ wt: "", amps: "", rpm: "", kw: "" })),
-    windingDetailsMaterialEstimate: "",
-    assembledProof: { imageUrl: "", driveLink: "" }
+
+    efficiencyDetails: {
+      kwh: "", pf: "", hz: "", efficiency: "",
+      percentageEfficiency: "", loadPercentage: "",
+    },
+
+    connectionDetails: "",
+
+    assembledProof: { imageUrl: "", driveLink: "" },
+    authorizedSignature: "",
   };
 
   const [formData, setFormData] = useState(initialState);
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [records, setRecords] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [isFormOpen, setIsFormOpen] = useState(false); // ✅ Admin friendly toggle state
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
+  /* ─── SERVICE LIST FOR SRF DROPDOWN ─── */
+  const [serviceList, setServiceList] = useState([]);
+
+  /* ─── FETCH ─── */
   const fetchRecords = async () => {
     try {
       const { data } = await api.get("/quality-record");
       setRecords(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to fetch records");
+    }
+  };
+
+  /* ─── FETCH SERVICE LIST FOR SRF DROPDOWN ─── */
+  const fetchServiceList = async () => {
+    try {
+      const { data } = await api.get("/service");
+      // Deduplicate by srfNumber
+      const seen = new Set();
+      const unique = (data || []).filter(s => {
+        if (!s.srfNumber || seen.has(s.srfNumber)) return false;
+        seen.add(s.srfNumber);
+        return true;
+      });
+      setServiceList(unique);
+    } catch {
+      /* Fail silently — SRF dropdown is optional enhancement */
     }
   };
 
   useEffect(() => {
     fetchRecords();
+    fetchServiceList();
     if (location.state?.editData) {
       handleEdit(location.state.editData);
-      setIsFormOpen(true); // Open form automatically when editing from view page
+      setIsFormOpen(true);
     }
   }, [location.state]);
 
-  const handleTopLevelChange = (field, value) => {
+  /* ─── CHANGE HANDLERS ─── */
+  const top = (field, value) =>
     setFormData(prev => ({ ...prev, [field]: value }));
+
+  const nested = (section, field, value) =>
+    setFormData(prev => ({ ...prev, [section]: { ...prev[section], [field]: value } }));
+
+  const loadChange = (index, field, value) => {
+    const updated = [...formData.loadTesting];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData(prev => ({ ...prev, loadTesting: updated }));
   };
 
-  const handleNestedChange = (section, field, value) => {
-    setFormData((prev) => ({
+  /* ─── SRF AUTOFILL HANDLER ─── */
+  const handleSRFSelect = (srfNumber) => {
+    const svc = serviceList.find(s => s.srfNumber === srfNumber);
+    if (!svc) {
+      // Manual entry — just update srfNumber, leave everything else
+      top("srfNumber", srfNumber);
+      return;
+    }
+    const md = svc.motorDetails || {};
+    setFormData(prev => ({
       ...prev,
-      [section]: { ...prev[section], [field]: value },
+      srfNumber:    svc.srfNumber   || prev.srfNumber,
+      companyName:  svc.customerName || prev.companyName,
+      address:      svc.address      || prev.address,
+      date:         svc.updatedDate
+                      ? new Date(svc.updatedDate).toISOString().split("T")[0]
+                      : prev.date,
+      serialNumber: md.serialNumber  || prev.serialNumber,
+      inspectionTesting: {
+        ...prev.inspectionTesting,
+        make:       md.make   || "",
+        hp:         md.hp     || "",
+        kw:         md.kw     || "",
+        amps:       md.amps   || "",
+        volts:      md.volts  || "",
+        phase:      md.phase  || "",
+        rpm:        md.rpm    || "",
+        insulation: md.ins    || "",
+        frame:      md.frame  || "",
+        type:       md.type   || "",
+      },
     }));
   };
 
-  const handleLoadChange = (index, field, value) => {
-    const updatedLoad = [...formData.loadTesting];
-    updatedLoad[index] = { ...updatedLoad[index], [field]: value };
-    setFormData((prev) => ({ ...prev, loadTesting: updatedLoad }));
-  };
-
+  /* ─── IMAGE UPLOAD ─── */
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const data = new FormData();
     data.append("file", file);
     data.append("upload_preset", "motor_upload");
-
-    setLoading(true);
+    setImageUploading(true);
     try {
       const res = await fetch("https://api.cloudinary.com/v1_1/dnwvgphk9/image/upload", {
-        method: "POST",
-        body: data,
+        method: "POST", body: data,
       });
       const fileData = await res.json();
-      setFormData((prev) => ({ 
-        ...prev, 
-        assembledProof: { ...prev.assembledProof, imageUrl: fileData.secure_url } 
+      setFormData(prev => ({
+        ...prev,
+        assembledProof: { ...prev.assembledProof, imageUrl: fileData.secure_url },
       }));
       toast.success("Image uploaded!");
-    } catch (err) {
+    } catch {
       toast.error("Upload failed");
     } finally {
-      setLoading(false);
+      setImageUploading(false);
     }
   };
 
+  /* ─── SUBMIT ─── */
   const handleSubmit = async (e) => {
     e.preventDefault();
+     console.log("SENDING DATA:", formData);
+
     setLoading(true);
     try {
       if (editingId) {
         await api.put(`/quality-record/${editingId}`, formData);
-        toast.success("Record Updated Successfully");
+        toast.success("Record Updated ✓");
       } else {
         await api.post("/quality-record", formData);
-        toast.success("Record Saved Successfully");
+        toast.success("Record Saved ✓");
       }
       setFormData(initialState);
       setEditingId(null);
-      setIsFormOpen(false); // Close form after success
+      setIsFormOpen(false);
       fetchRecords();
-      
-      if (location.state?.editData) {
-        navigate("/admin/quality-view");
-      }
+      if (location.state?.editData) navigate("/admin/quality-view");
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed");
     } finally {
       setLoading(false);
+      
     }
   };
 
+  /* ─── EDIT ─── */
   const handleEdit = (record) => {
     setFormData({
       ...initialState,
       ...record,
-      motorDetails: { ...initialState.motorDetails, ...(record.motorDetails || {}) },
-      windingDetails: { ...initialState.windingDetails, ...(record.windingDetails || {}) },
-      assemblingTesting: { ...initialState.assemblingTesting, ...(record.assemblingTesting || {}) },
-      assembledProof: { ...initialState.assembledProof, ...(record.assembledProof || {}) },
-      loadTesting: record.loadTesting?.length ? record.loadTesting : initialState.loadTesting
+      inspectionTesting: { ...initialState.inspectionTesting, ...(record.inspectionTesting || {}) },
+      coreDetails:        { ...initialState.coreDetails,        ...(record.coreDetails        || {}) },
+      conditionDetails:   { ...initialState.conditionDetails,   ...(record.conditionDetails   || {}) },
+      paperDetails:       { ...initialState.paperDetails,       ...(record.paperDetails       || {}) },
+      windingDetails:     { ...initialState.windingDetails,     ...(record.windingDetails     || {}) },
+      processDetails:     { ...initialState.processDetails,     ...(record.processDetails     || {}) },
+      assemblingTesting:  { ...initialState.assemblingTesting,  ...(record.assemblingTesting  || {}) },
+      efficiencyDetails:  { ...initialState.efficiencyDetails,  ...(record.efficiencyDetails  || {}) },
+      assembledProof:     { ...initialState.assembledProof,     ...(record.assembledProof     || {}) },
+      loadTesting: record.loadTesting?.length ? record.loadTesting : initialState.loadTesting,
     });
     setEditingId(record._id);
-    setIsFormOpen(true); // Open form when edit clicked
+    setIsFormOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  /* ─── DELETE ─── */
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this record?")) return;
     try {
       await api.delete(`/quality-record/${id}`);
-      toast.success("Record Deleted");
+      toast.success("Deleted");
       fetchRecords();
-    } catch (err) {
+    } catch {
       toast.error("Delete failed");
     }
   };
 
-  // ✅ Keep your exact same PDF logic
+  /* ─── PDF GENERATION ─── */
   const generatePDF = (record) => {
     const doc = new jsPDF("p", "mm", "a4");
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pw = doc.internal.pageSize.getWidth();
     let y = 10;
+
+    // Header
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("QUALITY INSPECTION RECORD", pageWidth / 2, y, { align: "center" });
+    doc.setFontSize(14);
+    doc.text("SENTHIL REWINDING WORKSHOP", pw / 2, y, { align: "center" });
+    y += 6;
+    doc.setFontSize(11);
+    doc.text("QUALITY INSPECTION RECORD", pw / 2, y, { align: "center" });
     y += 8;
-    doc.setFontSize(10);
+
+    // Company / SRF block
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.rect(10, y, 190, 25);
-    doc.text(`Company: ${record.companyName || ""}`, 12, y + 6);
-    doc.text(`SRF No: ${record.srfNumber || ""}`, 110, y + 6);
-    doc.text(`Party GP No: ${record.partyGPNumber || ""}`, 12, y + 14);
-    doc.text(`Date: ${record.date ? new Date(record.date).toLocaleDateString() : ""}`, 110, y + 14);
-    y += 30;
-    doc.setFont("helvetica", "bold");
-    doc.text("MOTOR DETAILS", 12, y);
-    y += 2;
-    doc.rect(10, y, 190, 35);
-    doc.setFont("helvetica", "normal");
-    let motorY = y + 6;
-    Object.entries(record.motorDetails || {}).forEach(([key, value], i) => {
-      const xPos = i % 2 === 0 ? 12 : 110;
-      doc.text(`${key.toUpperCase()}: ${value || ""}`, xPos, motorY);
-      if (i % 2 !== 0) motorY += 8;
-    });
-    y += 40;
-    doc.setFont("helvetica", "bold");
-    doc.text("WINDING DETAILS", 12, y);
-    y += 2;
-    doc.rect(10, y, 190, 35);
-    doc.setFont("helvetica", "normal");
-    let windingY = y + 6;
-    Object.entries(record.windingDetails || {}).forEach(([key, value], i) => {
-      const xPos = i % 2 === 0 ? 12 : 110;
-      doc.text(`${key.toUpperCase()}: ${value || ""}`, xPos, windingY);
-      if (i % 2 !== 0) windingY += 8;
-    });
-    y += 40;
-    doc.setFont("helvetica", "bold");
-    doc.text("LOAD TESTING DATA", 12, y);
-    y += 4;
-    const startX = 10;
-    const colWidth = 47;
-    const rowHeight = 8;
-    ["WT", "AMPS", "RPM", "KW"].forEach((head, i) => {
-      doc.rect(startX + i * colWidth, y, colWidth, rowHeight);
-      doc.text(head, startX + i * colWidth + 15, y + 5);
-    });
-    y += rowHeight;
-    (record.loadTesting || []).forEach((row) => {
-      ["wt", "amps", "rpm", "kw"].forEach((col, i) => {
-        doc.rect(startX + i * colWidth, y, colWidth, rowHeight);
-        doc.text(row[col] || "", startX + i * colWidth + 15, y + 5);
-      });
-      y += rowHeight;
-    });
-    y += 5;
-    doc.setFont("helvetica", "bold");
-    doc.text("MECHANICAL WORK DONE", 12, y);
-    y += 2;
     doc.rect(10, y, 190, 20);
-    doc.setFont("helvetica", "normal");
-    doc.text(record.mechanicalWorkDone || "", 12, y + 6, { maxWidth: 180 });
+    doc.text(`Company: ${record.companyName || ""}`, 12, y + 5);
+    doc.text(`SRF No: ${record.srfNumber || ""}`, 110, y + 5);
+    doc.text(`Date: ${record.date ? new Date(record.date).toLocaleDateString("en-IN") : ""}`, 12, y + 12);
+    doc.text(`Party GP No: ${record.partyGPNumber || ""}`, 110, y + 12);
     y += 25;
+
+    // Inspection & Testing
     doc.setFont("helvetica", "bold");
-    doc.text("CAUSE OF FAILURE", 12, y);
-    y += 2;
-    doc.rect(10, y, 190, 20);
-    doc.setFont("helvetica", "normal");
-    doc.text(record.causeOfFailure || "", 12, y + 6, { maxWidth: 180 });
-    y += 25;
+    doc.text("INSPECTION & TESTING", 12, y); y += 3;
+    const it = record.inspectionTesting || {};
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+      head: [["Make", "HP", "KW", "Amps", "Volts", "Phase", "RPM", "Ins", "Frame"]],
+      body: [[it.make||"", it.hp||"", it.kw||"", it.amps||"", it.volts||"", it.phase||"", it.rpm||"", it.insulation||"", it.frame||""]],
+      margin: { left: 10, right: 10 },
+    });
+    y = doc.lastAutoTable.finalY + 4;
+
+    // Winding Details
     doc.setFont("helvetica", "bold");
-    doc.text("ASSEMBLING & TESTING", 12, y);
-    y += 2;
-    doc.rect(10, y, 190, 25);
-    doc.setFont("helvetica", "normal");
-    doc.text(`HV Test: ${record.assemblingTesting?.hvTest || ""}`, 12, y + 6);
-    doc.text(`Running Time: ${record.assemblingTesting?.runningTime || ""}`, 12, y + 14);
-    doc.text(`Temperature: ${record.assemblingTesting?.temperature || ""}`, 110, y + 6);
-    y += 35;
-    if (record.assembledProof?.imageUrl) {
-      doc.setFont("helvetica", "bold");
-      doc.text("ASSEMBLED PROOF", 12, y);
-      y += 4;
-      doc.addImage(record.assembledProof.imageUrl, "JPEG", 12, y, 60, 40);
-    }
-    doc.save(`Quality_Record_${record.srfNumber}.pdf`);
+    doc.text("WINDING DETAILS", 12, y); y += 3;
+    const wd = record.windingDetails || {};
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+      head: [["SWG", "Slot", "Winding", "Pitch", "Turns", "Total Coils", "Total Meter", "Type"]],
+      body: [[wd.swg||"", wd.slot||"", wd.winding||"", wd.pitch||"", wd.turns||"", wd.totalCoils||"", wd.totalMeter||"", wd.windingType||""]],
+      margin: { left: 10, right: 10 },
+    });
+    y = doc.lastAutoTable.finalY + 4;
+
+    // Load Testing
+    doc.setFont("helvetica", "bold");
+    doc.text("LOAD TESTING", 12, y); y += 3;
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2, halign: "center" },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+      head: [["WT", "AMPS", "RPM", "KW"]],
+      body: (record.loadTesting || []).map(r => [r.wt||"", r.amps||"", r.rpm||"", r.kw||""]),
+      margin: { left: 10, right: 10 },
+    });
+    y = doc.lastAutoTable.finalY + 4;
+
+    // Mechanical Work + Cause
+    doc.setFont("helvetica", "bold");
+    doc.text("MECHANICAL WORK DONE", 12, y); y += 3;
+    doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+    doc.text(record.mechanicalWorkDone || "", 12, y + 6, { maxWidth: 186 });
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.text("CAUSE OF FAILURE", 12, y); y += 3;
+    doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+    doc.text(record.causeOfFailure || "", 12, y + 6, { maxWidth: 186 });
+    y += 20;
+
+    // Assembling & Testing
+    doc.setFont("helvetica", "bold");
+    doc.text("ASSEMBLING & TESTING", 12, y); y += 3;
+    const at = record.assemblingTesting || {};
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+      head: [["HV Test", "Run Time", "Temp", "V-L1", "V-L2", "V-L3", "A-L1", "A-L2", "A-L3", "RPM", "Drum"]],
+      body: [[at.hvTest||"", at.runningTime||"", at.temperature||"", at.noLoadVoltageL1||"", at.noLoadVoltageL2||"", at.noLoadVoltageL3||"", at.noLoadAmpsL1||"", at.noLoadAmpsL2||"", at.noLoadAmpsL3||"", at.rpm||"", at.drumSize||""]],
+      margin: { left: 10, right: 10 },
+    });
+    y = doc.lastAutoTable.finalY + 4;
+
+    // Efficiency
+    const ef = record.efficiencyDetails || {};
+    doc.setFont("helvetica", "bold");
+    doc.text("EFFICIENCY", 12, y); y += 3;
+    autoTable(doc, {
+      startY: y,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+      head: [["KWH", "PF", "Hz", "Efficiency", "% Efficiency", "Load %"]],
+      body: [[ef.kwh||"", ef.pf||"", ef.hz||"", ef.efficiency||"", ef.percentageEfficiency||"", ef.loadPercentage||""]],
+      margin: { left: 10, right: 10 },
+    });
+
+    doc.save(`QualityRecord_${record.srfNumber || "export"}.pdf`);
   };
 
+  /* ══════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen bg-gray-100 pb-20">
-      {/* --- ADMIN DASHBOARD HEADER --- */}
-      <div className="bg-white border-b px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm sticky top-0 z-50">
-        <h1 className="text-xl font-black text-gray-800 flex items-center gap-2">
-          <LayoutGrid className="text-blue-600" /> QUALITY MANAGEMENT
-        </h1>
-        <button 
-          onClick={() => {
-            setIsFormOpen(!isFormOpen);
-            if(isFormOpen) { setEditingId(null); setFormData(initialState); }
-          }}
-          className={`${isFormOpen ? 'bg-red-500' : 'bg-blue-600'} text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md`}
-        >
-          {isFormOpen ? <X size={20} /> : <FilePlus2 size={20} />}
-          {isFormOpen ? "CLOSE FORM" : "ADD NEW RECORD"}
-        </button>
-      </div>
+   <div className="min-h-screen bg-slate-100 pb-20 font-sans w-full overflow-x-hidden">
 
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        {/* --- DYNAMIC FORM SECTION --- */}
+      {/* ── TOP BAR ── */}
+     <div className="bg-white border-b border-slate-200 px-3 sm:px-6 py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm top-0 z-50">
+
+  <h1 className="text-sm sm:text-base font-black text-slate-800 flex items-center gap-2 uppercase tracking-widest">
+    <LayoutGrid className="text-blue-700" size={20} /> 
+    <span className="truncate">Quality Management</span>
+  </h1>
+
+  <button
+    onClick={() => {
+      setIsFormOpen(!isFormOpen);
+      if (isFormOpen) { setEditingId(null); setFormData(initialState); }
+    }}
+    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 sm:px-5 py-2 rounded font-bold text-sm transition-all shadow-sm whitespace-nowrap
+      ${isFormOpen ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-700 hover:bg-blue-800 text-white"}`}
+  >
+    {isFormOpen ? (
+      <>
+        <X size={16}/> 
+        <span className="hidden sm:inline">CLOSE FORM</span>
+        <span className="sm:hidden">CLOSE</span>
+      </>
+    ) : (
+      <>
+        <FilePlus2 size={16}/> 
+        <span className="hidden sm:inline">ADD NEW RECORD</span>
+        <span className="sm:hidden">ADD</span>
+      </>
+    )}
+  </button>
+
+</div>
+
+      <div className="max-w-6xl mx-auto p-4 space-y-6">
+
+        {/* ══════════ FORM ══════════ */}
         {isFormOpen && (
-          <div className="bg-white border-2 border-blue-600 shadow-xl rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
-              <h2 className="font-bold uppercase tracking-wider">
-                {editingId ? `Editing Record: #${formData.srfNumber}` : "New Inspection Entry"}
-              </h2>
-              <button onClick={handleSubmit} disabled={loading} className="bg-white text-blue-600 px-6 py-2 rounded font-bold flex items-center gap-2 hover:bg-blue-50">
-                {loading ? <Loader2 className="animate-spin" size={18}/> : <Save size={18}/>}
-                {editingId ? "UPDATE" : "SAVE"}
+          <div className="bg-white border-2 border-blue-700 shadow-xl overflow-hidden">
+
+            {/* Form header bar */}
+            <div className="bg-blue-700 px-4 py-3 flex justify-between items-center">
+              <div>
+                <h2 className="text-white font-black uppercase tracking-wider text-sm">
+                  {editingId ? `Editing: #${formData.srfNumber}` : "New Quality Inspection Entry"}
+                </h2>
+                <p className="text-blue-200 text-[10px] uppercase tracking-widest mt-0.5">
+                  Senthil Rewinding Workshop — Industrial Inspection Form
+                </p>
+              </div>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-white text-blue-700 px-5 py-2 rounded font-black flex items-center gap-2 hover:bg-blue-50 transition-all text-sm shadow-md disabled:opacity-60"
+              >
+                {loading ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>}
+                {editingId ? "UPDATE RECORD" : "SAVE RECORD"}
               </button>
             </div>
 
-            <form className="text-[12px] p-4" onSubmit={handleSubmit}>
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 bg-blue-50/30 p-4 border border-blue-100">
-                  <div>
-                    <label className="font-bold text-blue-800 uppercase">Company Name</label>
-                    <input value={formData.companyName || ""} onChange={(e) => handleTopLevelChange('companyName', e.target.value)} className="w-full border p-2" />
-                  </div>
-                  <div>
-                    <label className="font-bold text-blue-800 uppercase">SRF Number</label>
-                    <input value={formData.srfNumber || ""} onChange={(e) => handleTopLevelChange('srfNumber', e.target.value)} className="w-full border p-2" />
-                  </div>
-                  <div>
-                    <label className="font-bold text-blue-800 uppercase">Party GP Number</label>
-                    <input value={formData.partyGPNumber || ""} onChange={(e) => handleTopLevelChange('partyGPNumber', e.target.value)} className="w-full border p-2" />
-                  </div>
-                  <div>
-                    <label className="font-bold text-blue-800 uppercase">Date</label>
-                    <input type="date" value={formData.date ? formData.date.split('T')[0] : ""} onChange={(e) => handleTopLevelChange('date', e.target.value)} className="w-full border p-2" />
-                  </div>
+            <form onSubmit={handleSubmit} className="text-[11px]">
+
+              {/* ══ SECTION 1: HEADER ══ */}
+              <SectionTitle>Section 1 — Header Information</SectionTitle>
+              <div className="grid grid-cols-1 md:grid-cols-2 border-b border-blue-200">
+                <div className="border-r border-blue-200">
+                  <FieldRow label="Company Name">
+                    <FInput value={formData.companyName} onChange={e => top("companyName", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="Address">
+                    <FInput value={formData.address} onChange={e => top("address", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="SRF Number">
+                    <select
+                      value={formData.srfNumber}
+                      onChange={e => handleSRFSelect(e.target.value)}
+                      className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 appearance-none cursor-pointer"
+                    >
+                      <option value="">— Select SRF —</option>
+                      {serviceList.map(s => (
+                        <option key={s._id} value={s.srfNumber}>
+                          {s.srfNumber} — {s.customerName || ""}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldRow>
+                  <FieldRow label="Date">
+                    <FInput type="date" value={formData.date ? formData.date.split("T")[0] : ""} onChange={e => top("date", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="Serial Number">
+                    <FInput value={formData.serialNumber} onChange={e => top("serialNumber", e.target.value)} />
+                  </FieldRow>
+                </div>
+                <div>
+                  <FieldRow label="Party GP No.">
+                    <FInput value={formData.partyGPNumber} onChange={e => top("partyGPNumber", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="Party GP Date">
+                    <FInput type="date" value={formData.partyGPDate ? formData.partyGPDate.split("T")[0] : ""} onChange={e => top("partyGPDate", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="D-Note No.">
+                    <FInput value={formData.dNoteNumber} onChange={e => top("dNoteNumber", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="D-Note Date">
+                    <FInput type="date" value={formData.dNoteDate ? formData.dNoteDate.split("T")[0] : ""} onChange={e => top("dNoteDate", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="Bill No.">
+                    <FInput value={formData.billNo} onChange={e => top("billNo", e.target.value)} />
+                  </FieldRow>
+                  <FieldRow label="Bill Date">
+                    <FInput type="date" value={formData.billDate ? formData.billDate.split("T")[0] : ""} onChange={e => top("billDate", e.target.value)} />
+                  </FieldRow>
+                </div>
               </div>
 
-              {/* Your Technical Grid remains exactly the same */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-3">
-                  <h3 className="font-black text-blue-600 border-b-2 border-blue-600 uppercase">Motor Details</h3>
-                  {['make', 'hp', 'kw', 'volts', 'phase', 'rpm', 'serialNumber'].map(f => (
-                    <div key={f} className="flex items-center gap-2">
-                      <span className="w-20 font-bold uppercase">{f}:</span>
-                      <input value={formData.motorDetails[f] || ""} onChange={(e) => handleNestedChange('motorDetails', f, e.target.value)} className="flex-1 border-b p-1 outline-none focus:border-blue-600" />
+              {/* ══ SECTION 2: INSPECTION & TESTING ══ */}
+              <SectionTitle>Section 2 — Inspection &amp; Testing (inspectionTesting)</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-4 border-b border-blue-200">
+                {[
+                  ["Make",       "make"],
+                  ["HP",         "hp"],
+                  ["KW",         "kw"],
+                  ["Amps",       "amps"],
+                  ["Volts",      "volts"],
+                  ["Phase",      "phase"],
+                  ["RPM",        "rpm"],
+                  ["Insulation", "insulation"],
+                  ["Connection", "connection"],
+                  ["Frame",      "frame"],
+                  ["Type",       "type"],
+                  ["Sl. No.",    "slNo"],
+                  ["Ex. Volts",  "exV"],
+                  ["Ex. Amps",   "exA"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-b border-r border-blue-100 flex items-center min-h-[28px] ${i % 4 === 3 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[80px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.inspectionTesting[field]} onChange={e => nested("inspectionTesting", field, e.target.value)} />
                     </div>
-                  ))}
-                  <textarea placeholder="CAUSE OF FAILURE" value={formData.causeOfFailure || ""} onChange={(e) => handleTopLevelChange('causeOfFailure', e.target.value)} className="w-full border p-2 h-20 mt-4" />
-                </div>
+                  </div>
+                ))}
+              </div>
 
-                <div className="space-y-3">
-                  <h3 className="font-black text-blue-600 border-b-2 border-blue-600 uppercase">Winding Details</h3>
-                  {['swg', 'slot', 'winding', 'pitch', 'turns', 'totalCoils', 'totalMeter'].map(f => (
-                    <div key={f} className="flex items-center gap-2">
-                      <span className="w-24 font-bold uppercase">{f}:</span>
-                      <input value={formData.windingDetails[f] || ""} onChange={(e) => handleNestedChange('windingDetails', f, e.target.value)} className="flex-1 border-b p-1 outline-none focus:border-blue-600" />
+              {/* ══ SECTION 3: CORE DETAILS ══ */}
+              <SectionTitle>Section 3 — Core Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-4 border-b border-blue-200">
+                {[
+                  ["Core Length",      "coreLength"],
+                  ["Core Dia",         "coreDia"],
+                  ["Rotor Length",     "rotorLength"],
+                  ["Rotor Perimeter",  "rotorPerimeter"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-b border-r border-blue-100 flex items-center min-h-[28px] ${i === 3 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[90px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.coreDetails[field]} onChange={e => nested("coreDetails", field, e.target.value)} />
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
 
-                <div className="space-y-3">
-                  <h3 className="font-black text-blue-600 border-b-2 border-blue-600 uppercase">Material Estimate</h3>
-                  <textarea 
-                    value={formData.windingDetails.materialEstimate || ""} 
-                    onChange={(e) => handleNestedChange('windingDetails', 'materialEstimate', e.target.value)}
-                    className="w-full h-[280px] border p-4 outline-none resize-none" 
-                    placeholder="List materials..."
-                  />
+              {/* ══ SECTION 4: CONDITION DETAILS ══ */}
+              <SectionTitle>Section 4 — Condition Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-3 border-b border-blue-200">
+                {[
+                  ["Bearing No.",         "bearingNo"],
+                  ["Drive End Bearing",   "driveEndBearing"],
+                  ["Non-Drive End Brg",   "nonDriveEndBearing"],
+                  ["End Shield Cond.",    "endShieldCondition"],
+                  ["Drive End Cond.",     "driveEndCondition"],
+                  ["Non-Drive End Cond.", "nonDriveEndCondition"],
+                  ["Shaft Drive End",     "shaftDriveEnd"],
+                  ["Shaft Non-Drive",     "shaftNonDriveEnd"],
+                  ["Growler Test",        "growlerTest"],
+                  ["Rotor",               "rotor"],
+                  ["Stator Coil",         "statorCoil"],
+                  ["Rotor Position",      "rotorPosition"],
+                  ["Air Gap",             "airGap"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-b border-r border-blue-100 flex items-center min-h-[28px] ${i % 3 === 2 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[100px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.conditionDetails[field]} onChange={e => nested("conditionDetails", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ══ SECTION 5: PAPER DETAILS ══ */}
+              <SectionTitle>Section 5 — Paper Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-5 border-b border-blue-200">
+                {[
+                  ["Slot L",    "slotL"],
+                  ["Slot B",    "slotB"],
+                  ["Centre",    "centre"],
+                  ["Top",       "top"],
+                  ["Separate",  "separate"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-b border-r border-blue-100 flex items-center min-h-[28px] ${i === 4 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[60px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.paperDetails[field]} onChange={e => nested("paperDetails", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ══ SECTION 6: WINDING DETAILS ══ */}
+              <SectionTitle>Section 6 — Winding Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 border-b border-blue-200">
+                {[
+                  ["SWG",              "swg"],
+                  ["Slot",             "slot"],
+                  ["Winding",          "winding"],
+                  ["Pitch",            "pitch"],
+                  ["Turns",            "turns"],
+                  ["Total Coils",      "totalCoils"],
+                  ["Total Meter",      "totalMeter"],
+                  ["Winding Type",     "windingType"],
+                ].map(([label, field]) => (
+                  <div key={field} className="border-b border-r border-blue-100 flex items-center min-h-[28px]">
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[75px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.windingDetails[field]} onChange={e => nested("windingDetails", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Material Estimate — full width */}
+              <div className="border-b border-blue-200 flex">
+                <span className="text-[9px] font-black text-slate-500 uppercase w-[120px] shrink-0 px-2 py-2 bg-slate-50 border-r border-blue-100">Material Estimate</span>
+                <div className="flex-1 px-3 py-2">
+                  <FTextarea rows={3} value={formData.windingDetails.materialEstimate} onChange={e => nested("windingDetails", "materialEstimate", e.target.value)} placeholder="List materials, quantities..." />
                 </div>
               </div>
 
-              {/* Load Testing Table remains exactly the same */}
-              <div className="mt-6">
-                <h3 className="font-bold text-blue-600 mb-2 uppercase">Load Testing Data</h3>
-                <table className="w-full border-collapse border border-blue-600">
+              {/* ══ SECTIONS 7 & 8: MECHANICAL WORK + CAUSE OF FAILURE ══ */}
+              <div className="grid grid-cols-1 md:grid-cols-2 border-b border-blue-200">
+                <div className="border-r border-blue-200">
+                  <SectionTitle>Section 7 — Mechanical Work Done</SectionTitle>
+                  <div className="px-3 py-2">
+                    <FTextarea rows={3} value={formData.mechanicalWorkDone} onChange={e => top("mechanicalWorkDone", e.target.value)} placeholder="Describe mechanical work performed..." />
+                  </div>
+                </div>
+                <div>
+                  <SectionTitle>Section 8 — Cause of Failure</SectionTitle>
+                  <div className="px-3 py-2">
+                    <FTextarea rows={3} value={formData.causeOfFailure} onChange={e => top("causeOfFailure", e.target.value)} placeholder="Describe cause of failure..." />
+                  </div>
+                </div>
+              </div>
+
+              {/* ══ SECTION 9: PROCESS ROW ══ */}
+              <SectionTitle>Section 9 — Process Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-4 border-b border-blue-200">
+                {[
+                  ["Dismantled",    "dismantled"],
+                  ["Wire Removed",  "wireRemoved"],
+                  ["Rewound",       "rewound"],
+                  ["Assembled",     "assembled"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-r border-blue-100 flex items-center min-h-[28px] ${i === 3 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[80px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.processDetails[field]} onChange={e => nested("processDetails", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ══ SECTION 10: ASSEMBLING & TESTING ══ */}
+              <SectionTitle>Section 10 — Assembling &amp; Testing</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-4 border-b border-blue-200">
+                {[
+                  ["HV Test",      "hvTest"],
+                  ["Running Time", "runningTime"],
+                  ["Temperature",  "temperature"],
+                  ["Drum Size",    "drumSize"],
+                  ["RPM",          "rpm"],
+                  ["NL Volt L1",   "noLoadVoltageL1"],
+                  ["NL Volt L2",   "noLoadVoltageL2"],
+                  ["NL Volt L3",   "noLoadVoltageL3"],
+                  ["NL Amps L1",   "noLoadAmpsL1"],
+                  ["NL Amps L2",   "noLoadAmpsL2"],
+                  ["NL Amps L3",   "noLoadAmpsL3"],
+                ].map(([label, field]) => (
+                  <div key={field} className="border-b border-r border-blue-100 flex items-center min-h-[28px]">
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[80px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.assemblingTesting[field]} onChange={e => nested("assemblingTesting", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ══ SECTION 11: LOAD TESTING TABLE ══ */}
+              <SectionTitle>Section 11 — Load Testing Table</SectionTitle>
+              <div className="border-b border-blue-200 overflow-x-auto">
+                <table className="w-full border-collapse text-[11px]">
                   <thead>
-                    <tr className="bg-blue-600 text-white font-bold">
-                      <th className="border p-2">WT</th><th className="border p-2">AMPS</th><th className="border p-2">RPM</th><th className="border p-2">KW</th>
+                    <tr className="bg-blue-50">
+                      <th className="border border-blue-200 px-3 py-2 text-center font-black text-blue-700 uppercase w-8">#</th>
+                      {["WT", "AMPS", "RPM", "KW"].map(h => (
+                        <th key={h} className="border border-blue-200 px-4 py-2 text-center font-black text-blue-700 uppercase">{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {formData.loadTesting.map((row, i) => (
-                      <tr key={i}>
-                        {['wt', 'amps', 'rpm', 'kw'].map(col => (
-                          <td key={col} className="border border-blue-600 p-0">
-                            <input value={row[col] || ""} onChange={(e) => handleLoadChange(i, col, e.target.value)} className="w-full text-center p-2 outline-none" />
+                      <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                        <td className="border border-blue-100 text-center text-slate-400 font-bold py-1">{i + 1}</td>
+                        {["wt", "amps", "rpm", "kw"].map(col => (
+                          <td key={col} className="border border-blue-100 p-0">
+                            <input
+                              value={row[col] || ""}
+                              onChange={e => loadChange(i, col, e.target.value)}
+                              className="w-full text-center py-1.5 px-2 text-[11px] outline-none bg-transparent focus:bg-blue-50 transition-colors"
+                            />
                           </td>
                         ))}
                       </tr>
@@ -350,67 +743,141 @@ export default function AdminQualityRecordForm() {
                 </table>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                 <div className="border p-4">
-                    <h3 className="font-bold text-blue-600 mb-2 uppercase">Mechanical Work Done</h3>
-                    <textarea value={formData.mechanicalWorkDone || ""} onChange={(e) => handleTopLevelChange('mechanicalWorkDone', e.target.value)} className="w-full h-24 border p-2"/>
-                 </div>
-                 <div className="border p-4">
-                    <h3 className="font-bold text-blue-600 mb-2 uppercase">Assembling & Testing</h3>
-                    {['hvTest', 'runningTime', 'temperature'].map(f => (
-                       <input key={f} placeholder={f.toUpperCase()} value={formData.assemblingTesting[f] || ""} onChange={(e) => handleNestedChange('assemblingTesting', f, e.target.value)} className="w-full border mb-2 p-2" />
-                    ))}
-                 </div>
+              {/* ══ SECTION 12: EFFICIENCY ══ */}
+              <SectionTitle>Section 12 — Efficiency Details</SectionTitle>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 border-b border-blue-200">
+                {[
+                  ["KWH",          "kwh"],
+                  ["PF",           "pf"],
+                  ["Hz",           "hz"],
+                  ["Efficiency",   "efficiency"],
+                  ["% Efficiency", "percentageEfficiency"],
+                  ["Load %",       "loadPercentage"],
+                ].map(([label, field], i) => (
+                  <div key={field} className={`border-r border-blue-100 flex items-center min-h-[28px] ${i === 5 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase w-[72px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
+                    <div className="flex-1 px-2 py-0.5">
+                      <FInput value={formData.efficiencyDetails[field]} onChange={e => nested("efficiencyDetails", field, e.target.value)} />
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4">
-                 <div>
-                    <h3 className="font-bold text-blue-600 uppercase">Assembled Proof Image</h3>
-                    <input type="file" onChange={handleImageUpload} className="mt-2" />
-                    {formData.assembledProof.imageUrl && <img src={formData.assembledProof.imageUrl} className="h-20 mt-2 border-2 border-blue-600" alt="Proof"/>}
-                 </div>
-                 <div>
-                    <h3 className="font-bold text-blue-600 uppercase">Drive Link</h3>
-                    <input value={formData.assembledProof.driveLink || ""} onChange={(e) => handleNestedChange('assembledProof', 'driveLink', e.target.value)} className="w-full border p-2 mt-2" placeholder="URL here..."/>
-                 </div>
+              {/* ══ SECTION 13: CONNECTION DETAILS ══ */}
+              <SectionTitle>Section 13 — Connection Details</SectionTitle>
+              <div className="border-b border-blue-200 px-3 py-2">
+                <FTextarea rows={2} value={formData.connectionDetails} onChange={e => top("connectionDetails", e.target.value)} placeholder="Describe connection configuration..." />
+              </div>
+
+              {/* ══ SECTION 14: IMAGE PROOF ══ */}
+              <SectionTitle>Section 14 — Assembled Proof Image</SectionTitle>
+              <div className="grid grid-cols-1 md:grid-cols-2 border-b border-blue-200">
+                <div className="border-r border-blue-200 p-4 space-y-3">
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Upload Image (Cloudinary)</p>
+                  <label className="flex items-center gap-2 cursor-pointer bg-blue-50 border-2 border-dashed border-blue-300 px-4 py-3 rounded hover:bg-blue-100 transition-colors w-fit">
+                    {imageUploading
+                      ? <><Loader2 size={16} className="animate-spin text-blue-600"/> <span className="text-blue-600 font-bold text-xs">Uploading...</span></>
+                      : <><Upload size={16} className="text-blue-600"/> <span className="text-blue-600 font-bold text-xs">Choose Image</span></>}
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={imageUploading} />
+                  </label>
+                  {formData.assembledProof.imageUrl && (
+                    <div className="border-2 border-blue-400 inline-block">
+                      <img src={formData.assembledProof.imageUrl} alt="Assembled Proof" className="h-32 w-auto object-cover" />
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 space-y-3">
+                  <p className="text-[10px] font-black text-slate-500 uppercase">Drive Link (optional)</p>
+                  <FieldRow label="Drive Link">
+                    <FInput value={formData.assembledProof.driveLink} onChange={e => nested("assembledProof", "driveLink", e.target.value)} placeholder="https://drive.google.com/..." />
+                  </FieldRow>
+                  <FieldRow label="Auth. Signature">
+                    <FInput value={formData.authorizedSignature} onChange={e => top("authorizedSignature", e.target.value)} placeholder="Authorized by..." />
+                  </FieldRow>
+                </div>
+              </div>
+
+              {/* Bottom Save */}
+              <div className="p-4 bg-slate-50 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsFormOpen(false); setEditingId(null); setFormData(initialState); }}
+                  className="px-5 py-2 border border-slate-300 rounded font-bold text-slate-600 hover:bg-slate-100 text-sm transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-700 text-white rounded font-black flex items-center gap-2 hover:bg-blue-800 transition-all text-sm shadow-md disabled:opacity-60"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>}
+                  {editingId ? "UPDATE RECORD" : "SAVE RECORD"}
+                </button>
               </div>
             </form>
           </div>
         )}
 
-        {/* --- RECENT RECORDS GRID --- */}
+        {/* ══════════ RECORDS LIST ══════════ */}
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-black text-gray-800 uppercase tracking-tight">Recent Inspections</h2>
-            <span className="text-xs font-bold bg-gray-200 px-2 py-1 rounded">{records.length} Total</span>
+            <h2 className="text-base font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              <FileText size={18} className="text-blue-700" /> Recent Inspections
+            </h2>
+            <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-3 py-1 rounded uppercase tracking-widest">
+              {records.length} Records
+            </span>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {records.length === 0 ? (
-              <div className="col-span-full py-10 text-center text-gray-400 font-bold border-2 border-dashed rounded-xl">
-                No records found. Click "Add New" to begin.
-              </div>
-            ) : (
-              records.map((rec) => (
-                <div key={rec._id} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 group hover:border-blue-500 hover:shadow-md transition-all">
-                  <div className="flex justify-between items-start mb-2">
-                      <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black italic">
-                        #{rec.srfNumber}
-                      </div>
-                      <div className="flex gap-1">
-                        <button onClick={() => generatePDF(rec)} className="p-1.5 bg-gray-50 rounded-full text-gray-400 hover:text-green-600 transition-colors"><Download size={16}/></button>
-                        <button onClick={() => handleEdit(rec)} className="p-1.5 bg-gray-50 rounded-full text-gray-400 hover:text-blue-600 transition-colors"><Edit3 size={16}/></button>
-                        <button onClick={() => handleDelete(rec._id)} className="p-1.5 bg-gray-50 rounded-full text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={16}/></button>
-                      </div>
+
+          {records.length === 0 ? (
+            <div className="py-14 text-center text-slate-400 font-bold border-2 border-dashed border-slate-300 rounded-lg uppercase tracking-widest text-sm">
+              No records found. Click "Add New Record" to begin.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {records.map(rec => (
+                <div
+                  key={rec._id}
+                  className="bg-white border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all group overflow-hidden"
+                >
+                  {/* Card header stripe */}
+                  <div className="bg-blue-700 px-3 py-2 flex justify-between items-center">
+                    <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                      #{rec.srfNumber || "N/A"}
+                    </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => generatePDF(rec)} title="Download PDF"
+                        className="p-1 bg-blue-600 hover:bg-green-600 rounded text-white transition-colors">
+                        <Download size={13}/>
+                      </button>
+                      <button onClick={() => handleEdit(rec)} title="Edit"
+                        className="p-1 bg-blue-600 hover:bg-yellow-500 rounded text-white transition-colors">
+                        <Edit3 size={13}/>
+                      </button>
+                      <button onClick={() => handleDelete(rec._id)} title="Delete"
+                        className="p-1 bg-blue-600 hover:bg-red-600 rounded text-white transition-colors">
+                        <Trash2 size={13}/>
+                      </button>
+                    </div>
                   </div>
-                  <h4 className="font-black text-gray-800 text-sm uppercase truncate">{rec.companyName}</h4>
-                  <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-widest">
-                    Date: {rec.date ? new Date(rec.date).toLocaleDateString() : 'N/A'}
-                  </p>
+
+                  {/* Card body */}
+                  <div className="px-3 py-3 space-y-1.5">
+                    <p className="font-black text-slate-800 text-sm uppercase truncate">{rec.companyName || "—"}</p>
+                    <div className="text-[10px] text-slate-500 space-y-0.5">
+                      <p><span className="font-bold text-slate-400 uppercase">Date:</span> {rec.date ? new Date(rec.date).toLocaleDateString("en-IN") : "N/A"}</p>
+                      <p><span className="font-bold text-slate-400 uppercase">Make:</span> {rec.inspectionTesting?.make || "—"}</p>
+                      <p><span className="font-bold text-slate-400 uppercase">HP:</span> {rec.inspectionTesting?.hp || "—"} &nbsp;|&nbsp; <span className="font-bold text-slate-400 uppercase">RPM:</span> {rec.inspectionTesting?.rpm || "—"}</p>
+                    </div>
+                    {rec.assembledProof?.imageUrl && (
+                      <img src={rec.assembledProof.imageUrl} alt="" className="w-full h-20 object-cover mt-1 border border-blue-100" />
+                    )}
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -7,22 +7,19 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-100 flex overflow-x-hidden">
 
       {/* SIDEBAR */}
-      <AdminSidebar
-        open={sidebarOpen}
-        setOpen={setSidebarOpen}
-      />
+      <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col w-full lg:ml-64">
+      <div className="flex-1 flex flex-col w-full lg:ml-72 min-w-0">
 
         {/* NAVBAR */}
         <AdminNavbar toggleSidebar={() => setSidebarOpen(true)} />
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 pt-16 p-4 md:p-6 overflow-y-auto">
+        <main className="flex-1 pt-16 p-3 sm:p-4 md:p-6 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
 
