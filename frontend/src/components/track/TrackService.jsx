@@ -17,39 +17,55 @@ export default function UserTrackStatus() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleTrack = async (e) => {
-    e.preventDefault();
-    if (!trackId.trim()) return;
-    setLoading(true);
-    setError("");
-    setStatusData([]);
+ const handleTrack = async (e) => {
+  e.preventDefault();
+  if (!trackId.trim()) return;
 
-    try {
-      const response = await axios.get(
-        `${BACKEND}/service/track/${trackId.trim()}`
-      );
-      const raw = response.data;
+  setLoading(true);
+  setError("");
+  setStatusData([]);
 
-      // Unwrap all possible shapes
-      let record = null;
-      if (raw?.data && raw.data._id)              record = raw.data;       // { success, data:{} }
-      else if (raw?._id)                           record = raw;            // flat object
-      else if (Array.isArray(raw) && raw[0]?._id) record = raw[0];         // array
-      else if (Array.isArray(raw?.data))           record = raw.data[0];   // { data:[] }
+  try {
+    const response = await axios.get(
+      `${BACKEND}/service/track/${trackId.trim()}`
+    );
 
-      if (!record) { setError("No record found for this tracking ID."); return; }
-      setStatusData([record]);
+    const raw = response.data;
 
-    } catch (err) {
-      if (err?.response?.status === 404) {
-        setError("No record found for this tracking ID.");
-      } else {
-        setError("Server error. Please try again.");
-      }
-    } finally {
-      setLoading(false);
+    // ✅ FIX: handle multiple motors (same tracking code)
+    let records = [];
+
+    if (Array.isArray(raw)) {
+      records = raw;
     }
-  };
+    else if (Array.isArray(raw?.data)) {
+      records = raw.data;
+    }
+    else if (raw?.data && raw.data._id) {
+      records = [raw.data];
+    }
+    else if (raw?._id) {
+      records = [raw];
+    }
+
+    if (!records.length) {
+      setError("No record found for this tracking ID.");
+      return;
+    }
+
+    // ✅ IMPORTANT: set all records (not just first one)
+    setStatusData(records);
+
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      setError("No record found for this tracking ID.");
+    } else {
+      setError("Server error. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* ── PDF REPORT ── */
   const generateReport = (motor) => {
@@ -279,8 +295,8 @@ export default function UserTrackStatus() {
                 </div>
 
                 {/* 2. CORE SPECS GRID (Mobile: 1 col, Tablet: 2 col) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                  <SpecCard icon={<Wrench/>} label="Lead Engineer" value={motor.technician || "Allocating..."} />
+                <div className="grid grid-cols-1  sm:grid-cols-2 gap-4 md:gap-6">
+                  <SpecCard  icon={<Wrench/>} label="Technician" value={motor.technician || "Allocating..."} />
                   <SpecCard icon={<Cpu/>} label="Specifications" value={`${motor.motorDetails?.make || "GENERIC"} - ${motor.motorDetails?.hp || "0"} HP`} />
                   <SpecCard icon={<Hash/>} label="Serial Number" value={motor.motorDetails?.serialNumber || "NOT FOUND"} />
                   <SpecCard icon={<Clock/>} label="In-Date" value={motor.createdAt ? new Date(motor.createdAt).toLocaleDateString() : "N/A"} />

@@ -97,21 +97,22 @@ export const trackService = async (req, res) => {
       });
     }
 
-    const service = await Service.findOne({
+    // ✅ FIX: use find() instead of findOne()
+    const services = await Service.find({
       trackingCode: { $regex: `^${searchCode}$`, $options: "i" }
     });
 
-    if (!service) {
+    if (!services.length) {
       return res.status(404).json({
         success: false,
         message: "Record not found",
       });
     }
 
-    // 🔥 IMPORTANT
+    // ✅ return ALL motors
     return res.status(200).json({
       success: true,
-      data: service,
+      data: services,
     });
 
   } catch (err) {
@@ -121,8 +122,7 @@ export const trackService = async (req, res) => {
       message: "Internal Server Error",
     });
   }
-};
-/* =========================================================
+};/* =========================================================
    ADMIN GET ALL
 ========================================================= */
 export const getAll = async (req, res, next) => {
