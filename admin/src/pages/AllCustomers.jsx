@@ -25,19 +25,23 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* ─────────────── MOTOR FIELD (matches AdminServices style) ─────────────── */
-const MotorField = ({ label, value }) =>
-  value ? (
-    <div className="flex flex-col">
-      <span className="text-[8px] text-slate-400 uppercase tracking-wider font-bold">{label}</span>
-      <span className="text-[11px] font-bold text-slate-700 leading-tight">{value}</span>
-    </div>
-  ) : (
-    <div className="flex flex-col">
-      <span className="text-[8px] text-slate-400 uppercase tracking-wider font-bold">{label}</span>
-      <span className="text-[11px] text-slate-300">—</span>
-    </div>
-  );
+const MotorField = ({ label, value }) => (
+  <div className="flex flex-col gap-[2px]">
+    <span className="text-[9px] text-slate-400 uppercase tracking-wide font-semibold">
+      {label}
+    </span>
 
+    <span
+      className={`text-[12px] leading-snug ${
+        value
+          ? "text-slate-700 font-medium"
+          : "text-slate-300 italic"
+      }`}
+    >
+      {value || "Not specified"}
+    </span>
+  </div>
+);
 /* ══════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════ */
