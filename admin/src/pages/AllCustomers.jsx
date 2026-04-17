@@ -295,6 +295,7 @@ export default function AllCustomers() {
         ["Phase", md.phase || "-", "Type", md.type || "-"],
         ["Insulation", md.ins || "-", "Frame", md.frame || "-"],
         ["Serial Number", md.serialNumber || "-", "Gate Pass No.", md.gatePassNumber || "-"],
+        ["Gate Pass Date", md.gatePassDate ? new Date(md.gatePassDate).toLocaleDateString("en-IN") : "-", "", ""],
       ],
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 3.5, valign: "middle", lineColor: [226, 232, 240] },
@@ -375,7 +376,7 @@ export default function AllCustomers() {
     const head = [[
       "SRF", "Tracking", "Date", "Customer", "Phone",
       "Make", "HP", "RPM", "KW", "Volts", "Amps",
-      "Phase", "Type", "S/N", "GP No.",
+      "Phase", "Type", "S/N", "GP Info",
       "Complaint", "Spares", "Technician", "Status",
       "Receiver", "Delivered",
     ]];
@@ -397,7 +398,7 @@ export default function AllCustomers() {
         md.phase || "-",
         md.type || "-",
         md.serialNumber || "-",
-        md.gatePassNumber || "-",
+        (md.gatePassNumber || "-") + (md.gatePassDate ? `\n${new Date(md.gatePassDate).toLocaleDateString("en-IN")}` : ""),
         s.natureOfComplaint || "-",
         s.sparesReceived || "-",
         s.technician || "-",
@@ -732,6 +733,7 @@ export default function AllCustomers() {
                             <MotorField label="Frame" value={md.frame} />
                             <MotorField label="S/N"   value={md.serialNumber}   />
                             <MotorField label="G.P."  value={md.gatePassNumber} />
+                            <MotorField label="G.P. Date" value={md.gatePassDate ? new Date(md.gatePassDate).toLocaleDateString("en-IN") : null} />
                           </div>
                         </td>
 

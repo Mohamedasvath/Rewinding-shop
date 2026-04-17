@@ -61,7 +61,8 @@ export const createService = async (req, res, next) => {
   ins: parsedMotorDetails?.ins,
   frame: parsedMotorDetails?.frame,
   serialNumber: parsedMotorDetails?.serialNumber,
-  gatePassNumber: parsedMotorDetails?.gatePassNumber
+  gatePassNumber: parsedMotorDetails?.gatePassNumber,
+  gatePassDate: parsedMotorDetails?.gatePassDate || null
 },
 
       problemIdentity: problem,
@@ -176,17 +177,52 @@ export const updateService = async (req, res, next) => {
       service.motorDetails.frame         = md.frame         ?? service.motorDetails.frame;
       service.motorDetails.serialNumber  = md.serialNumber  ?? service.motorDetails.serialNumber;
       service.motorDetails.gatePassNumber= md.gatePassNumber?? service.motorDetails.gatePassNumber;
+      service.motorDetails.gatePassDate  = md.gatePassDate !== undefined ? md.gatePassDate : service.motorDetails.gatePassDate;
     } else {
       if (req.body.make !== undefined) service.motorDetails.make = req.body.make;
       if (req.body.hp   !== undefined) service.motorDetails.hp   = req.body.hp;
       if (req.body.rpm  !== undefined) service.motorDetails.rpm  = req.body.rpm;
       if (req.body.serialNumber   !== undefined) service.motorDetails.serialNumber   = req.body.serialNumber;
       if (req.body.gatePassNumber !== undefined) service.motorDetails.gatePassNumber = req.body.gatePassNumber;
+      if (req.body.gatePassDate !== undefined) service.motorDetails.gatePassDate = req.body.gatePassDate || null;
     }
 
     if (req.body.date !== undefined) {
-  service.updatedDate = req.body.date;
-}
+      service.updatedDate = req.body.date;
+    }
+
+    /* ── WORK HISTORY TRACKING ─────────────────────────────────────
+       Log every technician assignment or stage change with timestamps.
+       - Close the last open history entry (set endedAt = now)
+       - Push a new entry for the new technician / stage
+    ─────────────────────────────────────────────────────────────── */
+    const incomingTech  = req.body.technician !== undefined ? req.body.technician : service.technician;
+    const incomingStage = req.body.stage      !== undefined ? req.body.stage      : service.stage;
+
+    const techChanged  = req.body.technician !== undefined && req.body.technician !== service.technician;
+    const stageChanged = req.body.stage      !== undefined && req.body.stage      !== service.stage;
+
+    if (techChanged || stageChanged) {
+      const now = new Date();
+
+      // Close the most recent open entry if any
+      if (!service.workHistory) service.workHistory = [];
+      const lastEntry = service.workHistory[service.workHistory.length - 1];
+      if (lastEntry && !lastEntry.endedAt) {
+        lastEntry.endedAt = now;
+      }
+
+      // Push a new history entry
+      service.workHistory.push({
+        technician: incomingTech  || service.technician,
+        stage:      incomingStage || service.stage,
+        startedAt:  now,
+        endedAt:    null,
+      });
+    }
+
+    // Apply the actual field updates
+    service.technician = incomingTech;
 
     /* STATUS UPDATE */
     if (req.body.stage) {
@@ -205,7 +241,31 @@ export const updateService = async (req, res, next) => {
 
     service.lastUpdatedAt = new Date();
 
-    const updated = await service.save();
+    // Force strict DB save bypassing any Mongoose subdocument tracking limits
+    await Service.findByIdAndUpdate(req.params.id, {
+      $set: {
+         customerName: service.customerName,
+         address: service.address,
+         phone: service.phone,
+         gstNumber: service.gstNumber,
+         srfNumber: service.srfNumber,
+         trackingCode: service.trackingCode,
+         problemIdentity: service.problemIdentity,
+         technician: service.technician,
+         natureOfComplaint: service.natureOfComplaint,
+         sparesReceived: service.sparesReceived,
+         motorDetails: service.motorDetails,
+         updatedDate: service.updatedDate,
+         stage: service.stage,
+         completedAt: service.completedAt,
+         deliveryChallan: service.deliveryChallan,
+         lastUpdatedAt: service.lastUpdatedAt,
+         workHistory: service.workHistory,
+      }
+    }, { new: true, runValidators: false });
+
+    // Refetch the document fresh from DB
+    const updated = await Service.findById(req.params.id);
 
     res.json(updated);
 
@@ -343,6 +403,11 @@ export const generateChallan = async (req, res, next) => {
     doc.text(`RPM: ${service.motorDetails?.rpm || "-"}`);
     doc.text(`Serial Number: ${service.motorDetails?.serialNumber || "-"}`);
     doc.text(`Gate Pass Number: ${service.motorDetails?.gatePassNumber || "-"}`);
+    doc.text(`Gate Pass Date: ${
+  service.motorDetails?.gatePassDate
+    ? new Date(service.motorDetails.gatePassDate).toLocaleDateString("en-IN")
+    : "-"
+}`);
     doc.moveDown(2);
 
     /* RECEIVER */

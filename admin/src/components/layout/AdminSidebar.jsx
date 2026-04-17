@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  UserCog,
   ClipboardList,
   Users,
   Settings,
@@ -96,6 +97,7 @@ export default function AdminSidebar({ open, setOpen }) {
             </p>
             <SidebarItem to="/admin/quality-records" icon={<ClipboardCheck size={20} />} text="Quality Records" onClick={closeMobile} />
             <SidebarItem to="/admin/quality-view" icon={<FileSearch size={20} />} text="Q-Record View" onClick={closeMobile} />
+            <SidebarItem to="/admin/technician-status" icon={<UserCog size={20} />} text="Technician Status" onClick={closeMobile} />
               <SidebarItem to="/admin/d-challan" icon={<Package size={20} />} text="D-challan" onClick={closeMobile} />
           </div>
 

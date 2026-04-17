@@ -83,7 +83,7 @@ const FullReport = ({ rec }) => {
           <FR label="Address"       value={rec.address} />
           <FR label="SRF Number"    value={rec.srfNumber} />
           <FR label="Date"          value={fd(rec.date)} />
-          <FR label="Serial No."    value={rec.serialNumber} />
+          <FR label="Technician"    value={rec.technician} />
         </div>
         <div>
           <FR label="Party GP No."  value={rec.partyGPNumber} />
@@ -141,17 +141,14 @@ const FullReport = ({ rec }) => {
       <SecTitle icon={AlertTriangle} label="Section 4 — Condition Details" color="amber" />
       <div className="grid grid-cols-2 md:grid-cols-3 border-b border-slate-200">
         {[
-          ["Bearing No.",         cnd.bearingNo],
-          ["Drive End Brg",       cnd.driveEndBearing],
-          ["Non-Drive End Brg",   cnd.nonDriveEndBearing],
-          ["End Shield Cond.",    cnd.endShieldCondition],
-          ["Drive End Cond.",     cnd.driveEndCondition],
-          ["Non-Drive Cond.",     cnd.nonDriveEndCondition],
-          ["Shaft Drive End",     cnd.shaftDriveEnd],
-          ["Shaft Non-Drive",     cnd.shaftNonDriveEnd],
-          ["Growler Test",        cnd.growlerTest],
-          ["Rotor",               cnd.rotor],
-          ["Stator Coil",         cnd.statorCoil],
+          ["Brg - Drive End",     cnd.driveEndBearing],
+          ["Brg - Non-Drive",     cnd.nonDriveEndBearing],
+          ["Shield - Drive End",  cnd.driveEndCondition],
+          ["Shield - Non-Drive",  cnd.nonDriveEndCondition],
+          ["Shaft - Drive End",   cnd.shaftDriveEnd],
+          ["Shaft - Non-Drive",   cnd.shaftNonDriveEnd],
+          ["Growler - Rotor",     cnd.rotor],
+          ["Growler - Stator",    cnd.statorCoil],
           ["Rotor Position",      cnd.rotorPosition],
           ["Air Gap",             cnd.airGap],
         ].map(([label, val]) => (
@@ -181,16 +178,15 @@ const FullReport = ({ rec }) => {
 
       {/* ── SECTION 6: WINDING DETAILS ── */}
       <SecTitle icon={Wrench} label="Section 6 — Winding Details" color="blue" />
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200">
+      <div className="grid grid-cols-1 border-b border-slate-200">
         {[
-          ["SWG",           wd.swg],
-          ["Slot",          wd.slot],
-          ["Winding",       wd.winding],
-          ["Pitch",         wd.pitch],
-          ["Turns",         wd.turns],
-          ["Total Coils",   wd.totalCoils],
-          ["Total Meter",   wd.totalMeter],
-          ["Winding Type",  wd.windingType],
+          ["SWG",           `Existing: ${fv(wd.swg?.existing)}  |  Alteration: ${fv(wd.swg?.alteration)}`],
+          ["Slot",          `Existing: ${fv(wd.slot?.existing)}  |  Alteration: ${fv(wd.slot?.alteration)}`],
+          ["Winding",       `Existing: ${fv(wd.winding?.existing)}  |  Alteration: ${fv(wd.winding?.alteration)}`],
+          ["Pitch",         `Existing: ${fv(wd.pitch?.existing)}  |  Alteration: ${fv(wd.pitch?.alteration)}`],
+          ["Turns/Slot",    `Existing: ${fv(wd.turns?.existing)}  |  Alteration: ${fv(wd.turns?.alteration)}`],
+          ["Total Coils",   `Existing: ${fv(wd.totalCoils?.existing)}  |  Alteration: ${fv(wd.totalCoils?.alteration)}`],
+          ["Total Meter",   `Existing: ${fv(wd.totalMeter?.existing)}  |  Alteration: ${fv(wd.totalMeter?.alteration)}`],
         ].map(([label, val]) => (
           <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
             <span className="text-[9px] font-bold text-slate-500 uppercase w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
@@ -339,291 +335,140 @@ const FullReport = ({ rec }) => {
 /* ══════════════════════════════════════════════
    PDF GENERATOR
 ══════════════════════════════════════════════ */
-const buildPDFPage = (doc, rec) => {
-  const pw     = doc.internal.pageSize.getWidth();
-  const m      = 10;
-  const hs     = { fillColor: [30, 58, 138], textColor: 255, fontSize: 7, fontStyle: "bold", cellPadding: 2 };
-  const cs     = { fontSize: 7, cellPadding: 1.8 };
-  const lh     = { fontStyle: "bold", fillColor: [241, 245, 249], cellWidth: 30 };
+const buildPDFPage = (doc, record) => {
+  const pw = doc.internal.pageSize.getWidth();
+  let y = 10;
 
-  const it  = rec.inspectionTesting  || {};
-  const cd  = rec.coreDetails        || {};
-  const cnd = rec.conditionDetails   || {};
-  const pd  = rec.paperDetails       || {};
-  const wd  = rec.windingDetails     || {};
-  const prd = rec.processDetails     || {};
-  const at  = rec.assemblingTesting  || {};
-  const ef  = rec.efficiencyDetails  || {};
-  const lt  = rec.loadTesting        || [];
-
-  /* Header */
-  doc.setFillColor(30, 58, 138);
-  doc.rect(0, 0, pw, 18, "F");
+  // Header
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255);
-  doc.text("SENTHIL REWINDING WORKSHOP", pw / 2, 8, { align: "center" });
-  doc.setFontSize(8);
-  doc.setTextColor(180, 200, 255);
-  doc.text("QUALITY INSPECTION REPORT", pw / 2, 14, { align: "center" });
-  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(14);
+  doc.text("SENTHIL REWINDING WORKSHOP", pw / 2, y, { align: "center" });
+  y += 6;
+  doc.setFontSize(11);
+  doc.text("QUALITY INSPECTION RECORD", pw / 2, y, { align: "center" });
+  y += 8;
 
-  let y = 21;
-
-  /* S1 Header Info */
-  doc.setFont("helvetica", "bold"); doc.setFontSize(7);
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 1 — HEADER INFORMATION", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Company",      fv(rec.companyName),    "SRF No.",      fv(rec.srfNumber)],
-      ["Date",         fd(rec.date),            "Serial No.",   fv(rec.serialNumber)],
-      ["Party GP No.", fv(rec.partyGPNumber),   "Party GP Date",fd(rec.partyGPDate)],
-      ["D-Note No.",   fv(rec.dNoteNumber),     "D-Note Date",  fd(rec.dNoteDate)],
-      ["Bill No.",     fv(rec.billNo),          "Bill Date",    fd(rec.billDate)],
-      ["Address",      { content: fv(rec.address), colSpan: 3 }],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S2 Inspection & Testing */
-  doc.setFillColor(30, 58, 138); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 2 — INSPECTION & TESTING", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Make",       fv(it.make),       "HP",          fv(it.hp)],
-      ["KW",         fv(it.kw),         "Amps",        fv(it.amps)],
-      ["Volts",      fv(it.volts),      "Phase",       fv(it.phase)],
-      ["RPM",        fv(it.rpm),        "Insulation",  fv(it.insulation)],
-      ["Connection", fv(it.connection), "Frame",       fv(it.frame)],
-      ["Type",       fv(it.type),       "Sl. No.",     fv(it.slNo)],
-      ["Ex. Volts",  fv(it.exV),        "Ex. Amps",    fv(it.exA)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S3 Core Details */
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 3 — CORE DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Core Length", fv(cd.coreLength), "Core Dia",        fv(cd.coreDia)],
-      ["Rotor Length",fv(cd.rotorLength),"Rotor Perimeter", fv(cd.rotorPerimeter)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S4 Condition Details */
-  doc.setFillColor(146, 64, 14); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 4 — CONDITION DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Bearing No.",        fv(cnd.bearingNo),          "Drive End Brg",       fv(cnd.driveEndBearing)],
-      ["Non-Drive End Brg",  fv(cnd.nonDriveEndBearing), "End Shield Cond.",    fv(cnd.endShieldCondition)],
-      ["Drive End Cond.",    fv(cnd.driveEndCondition),  "Non-Drive Cond.",     fv(cnd.nonDriveEndCondition)],
-      ["Shaft Drive End",    fv(cnd.shaftDriveEnd),      "Shaft Non-Drive",     fv(cnd.shaftNonDriveEnd)],
-      ["Growler Test",       fv(cnd.growlerTest),        "Rotor",               fv(cnd.rotor)],
-      ["Stator Coil",        fv(cnd.statorCoil),         "Rotor Position",      fv(cnd.rotorPosition)],
-      ["Air Gap",            fv(cnd.airGap),             "",                    ""],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S5 Paper Details */
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 5 — PAPER DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Slot L", fv(pd.slotL), "Slot B",   fv(pd.slotB)],
-      ["Centre", fv(pd.centre),"Top",      fv(pd.top)],
-      ["Separate",fv(pd.separate),"",      ""],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S6 Winding Details */
-  doc.setFillColor(30, 58, 138); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 6 — WINDING DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["SWG",         fv(wd.swg),         "Slot",          fv(wd.slot)],
-      ["Winding",     fv(wd.winding),     "Pitch",         fv(wd.pitch)],
-      ["Turns",       fv(wd.turns),       "Total Coils",   fv(wd.totalCoils)],
-      ["Total Meter", fv(wd.totalMeter),  "Winding Type",  fv(wd.windingType)],
-      ["Material Est.",{ content: fv(wd.materialEstimate), colSpan: 3 }],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S7 & S8 Mechanical + Cause */
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 7 & 8 — MECHANICAL WORK DONE / CAUSE OF FAILURE", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh },
-    body: [
-      ["Mechanical Work Done", fv(rec.mechanicalWorkDone)],
-      ["Cause of Failure",     fv(rec.causeOfFailure)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S9 Process Details */
-  doc.setFillColor(6, 78, 59); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 9 — PROCESS DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["Dismantled",   fv(prd.dismantled), "Wire Removed", fv(prd.wireRemoved)],
-      ["Rewound",      fv(prd.rewound),    "Assembled",    fv(prd.assembled)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S10 Assembling & Testing */
-  doc.setFillColor(30, 58, 138); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 10 — ASSEMBLING & TESTING", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["HV Test",       fv(at.hvTest),          "Running Time",   fv(at.runningTime)],
-      ["Temperature",   fv(at.temperature),     "Drum Size",      fv(at.drumSize)],
-      ["RPM",           fv(at.rpm),             "",               ""],
-      ["NL Volt L1",    fv(at.noLoadVoltageL1), "NL Volt L2",     fv(at.noLoadVoltageL2)],
-      ["NL Volt L3",    fv(at.noLoadVoltageL3), "NL Amps L1",     fv(at.noLoadAmpsL1)],
-      ["NL Amps L2",    fv(at.noLoadAmpsL2),    "NL Amps L3",     fv(at.noLoadAmpsL3)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S11 Load Testing */
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 11 — LOAD TESTING TABLE", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid",
-    head: [["#", "WT", "AMPS", "RPM", "KW"]],
-    headStyles: hs,
-    styles: { ...cs, halign: "center" },
-    body: (lt.length > 0 ? lt : Array(5).fill({})).map((row, i) => [
-      i + 1, fv(row.wt), fv(row.amps), fv(row.rpm), fv(row.kw),
-    ]),
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S12 Efficiency */
-  doc.setFillColor(88, 28, 135); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 12 — EFFICIENCY DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    columnStyles: { 0: lh, 2: lh },
-    body: [
-      ["KWH",          fv(ef.kwh),                  "PF",           fv(ef.pf)],
-      ["Hz",           fv(ef.hz),                   "Efficiency",   fv(ef.efficiency)],
-      ["% Efficiency", fv(ef.percentageEfficiency),  "Load %",      fv(ef.loadPercentage)],
-    ],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 3;
-
-  /* S13 Connection Details */
-  doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.text("SECTION 13 — CONNECTION DETAILS", m + 2, y + 3.5);
-  doc.setTextColor(0, 0, 0); y += 6;
-  autoTable(doc, {
-    startY: y, theme: "grid", styles: cs,
-    body: [[fv(rec.connectionDetails)]],
-    margin: { left: m, right: m },
-  });
-  y = doc.lastAutoTable.finalY + 5;
-
-  /* S14 Assembled Proof Image — safe, only if exists */
-  const imgUrl = rec?.assembledProof?.imageUrl;
-  if (imgUrl) {
-    try {
-      const ph2 = doc.internal.pageSize.getHeight();
-      const remainingSpace = ph2 - y - 30;
-      const imgH = 50;
-      const imgW = 70;
-      if (remainingSpace < imgH + 10) {
-        doc.addPage();
-        y = 15;
-      }
-      doc.setFillColor(71, 85, 105); doc.rect(m, y, pw - m * 2, 5, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.text("SECTION 14 — ASSEMBLED PROOF", m + 2, y + 3.5);
-      doc.setTextColor(0, 0, 0); y += 8;
-      doc.addImage(imgUrl, "JPEG", m, y, imgW, imgH, undefined, "FAST");
-      y += imgH + 6;
-    } catch {
-      /* Image load failed — skip silently, no crash */
-    }
+  // Company / SRF block
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.rect(10, y, 190, 20);
+  doc.text(`Company: ${record.companyName || ""}`, 12, y + 5);
+  doc.text(`SRF No: ${record.srfNumber || ""}`, 110, y + 5);
+  doc.text(`Date: ${record.date ? new Date(record.date).toLocaleDateString("en-IN") : ""}`, 12, y + 12);
+  doc.text(`Party GP No: ${record.partyGPNumber || ""}`, 110, y + 12);
+  if (record.technician) {
+    doc.text(`Tech: ${record.technician}`, 110, y + 18);
   }
+  y += 25;
+
+  // Inspection & Testing
+  doc.setFont("helvetica", "bold");
+  doc.text("INSPECTION & TESTING", 12, y); y += 3;
+  const it = record.inspectionTesting || {};
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+    head: [["Make", "HP", "KW", "Amps", "Volts", "Phase", "RPM", "Ins", "Frame"]],
+    body: [[it.make||"", it.hp||"", it.kw||"", it.amps||"", it.volts||"", it.phase||"", it.rpm||"", it.insulation||"", it.frame||""]],
+    margin: { left: 10, right: 10 },
+  });
+  y = doc.lastAutoTable.finalY + 4;
+
+  // Winding Details
+  doc.setFont("helvetica", "bold");
+  doc.text("WINDING DETAILS", 12, y); y += 3;
+  const wd = record.windingDetails || {};
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+    head: [["Details", "Existing", "Alteration"]],
+    body: [
+      ["SWG", wd.swg?.existing||"", wd.swg?.alteration||""],
+      ["Slot", wd.slot?.existing||"", wd.slot?.alteration||""],
+      ["Winding", wd.winding?.existing||"", wd.winding?.alteration||""],
+      ["Pitch", wd.pitch?.existing||"", wd.pitch?.alteration||""],
+      ["Turns", wd.turns?.existing||"", wd.turns?.alteration||""],
+      ["Total Coils", wd.totalCoils?.existing||"", wd.totalCoils?.alteration||""],
+      ["Total Meter", wd.totalMeter?.existing||"", wd.totalMeter?.alteration||""],
+    ],
+    margin: { left: 10, right: 10 },
+  });
+  y = doc.lastAutoTable.finalY + 4;
+  doc.setFont("helvetica", "bold");
+  doc.text("MATERIALS ESTIMATE", 12, y); y += 3;
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.text(wd.materialEstimate || "", 12, y + 6, { maxWidth: 186 });
+  y += 20;
+
+  // Load Testing
+  doc.setFont("helvetica", "bold");
+  doc.text("LOAD TESTING", 12, y); y += 3;
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 2, halign: "center" },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+    head: [["WT", "AMPS", "RPM", "KW"]],
+    body: (record.loadTesting || []).map(r => [r.wt||"", r.amps||"", r.rpm||"", r.kw||""]),
+    margin: { left: 10, right: 10 },
+  });
+  y = doc.lastAutoTable.finalY + 4;
+
+  // Mechanical Work + Cause
+  doc.setFont("helvetica", "bold");
+  doc.text("MECHANICAL WORK DONE", 12, y); y += 3;
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.text(record.mechanicalWorkDone || "", 12, y + 6, { maxWidth: 186 });
+  y += 20;
+  doc.setFont("helvetica", "bold");
+  doc.text("CAUSE OF FAILURE", 12, y); y += 3;
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.text(record.causeOfFailure || "", 12, y + 6, { maxWidth: 186 });
+  y += 20;
+
+  // Assembling & Testing
+  doc.setFont("helvetica", "bold");
+  doc.text("ASSEMBLING & TESTING", 12, y); y += 3;
+  const at = record.assemblingTesting || {};
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+    head: [["HV Test", "Run Time", "Temp", "V-L1", "V-L2", "V-L3", "A-L1", "A-L2", "A-L3", "RPM", "Drum"]],
+    body: [[at.hvTest||"", at.runningTime||"", at.temperature||"", at.noLoadVoltageL1||"", at.noLoadVoltageL2||"", at.noLoadVoltageL3||"", at.noLoadAmpsL1||"", at.noLoadAmpsL2||"", at.noLoadAmpsL3||"", at.rpm||"", at.drumSize||""]],
+    margin: { left: 10, right: 10 },
+  });
+  y = doc.lastAutoTable.finalY + 4;
+
+  // Efficiency
+  const ef = record.efficiencyDetails || {};
+  doc.setFont("helvetica", "bold");
+  doc.text("EFFICIENCY", 12, y); y += 3;
+  autoTable(doc, {
+    startY: y,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
+    head: [["KWH", "PF", "Hz", "Efficiency", "% Efficiency", "Load %"]],
+    body: [[ef.kwh||"", ef.pf||"", ef.hz||"", ef.efficiency||"", ef.percentageEfficiency||"", ef.loadPercentage||""]],
+    margin: { left: 10, right: 10 },
+  });
 
   /* Signature */
+  y = doc.lastAutoTable.finalY + 15;
   doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("Technician Signature: _________________________", m, y + 5);
-  doc.text("Authorized Signature: _________________________", pw - m - 75, y + 5);
-  if (rec.authorizedSignature) {
+  doc.text("Technician Signature: _________________________", 10, y + 5);
+  doc.text("Authorized Signature: _________________________", pw - 10 - 75, y + 5);
+  if (record.authorizedSignature) {
     doc.setFont("helvetica", "bold");
-    doc.text(rec.authorizedSignature, pw - m - 75, y + 11);
+    doc.text(record.authorizedSignature, pw - 10 - 75, y + 11);
   }
-
-  /* Footer */
-  const ph = doc.internal.pageSize.getHeight();
-  doc.setFontSize(6);
-  doc.setTextColor(150);
-  doc.text(
-    `Generated: ${new Date().toLocaleString("en-IN")} | Senthil Rewinding Workshop`,
-    pw / 2, ph - 5, { align: "center" }
-  );
 };
 
 /* ══════════════════════════════════════════════
@@ -634,6 +479,8 @@ export default function QualityRecordView() {
   const [records, setRecords]           = useState([]);
   const [loading, setLoading]           = useState(true);
   const [searchTerm, setSearchTerm]     = useState("");
+  const [searchCoreDia, setSearchCoreDia]       = useState("");
+  const [searchCoreLength, setSearchCoreLength] = useState("");
   const [selectedYear, setSelectedYear] = useState("All");
   const [expandedId, setExpandedId]     = useState(null);
 
@@ -696,6 +543,8 @@ export default function QualityRecordView() {
   /* ── universal search + year filter ── */
   const filtered = useMemo(() => {
     const t = searchTerm.trim().toLowerCase();
+    const tCD = searchCoreDia.trim().toLowerCase();
+    const tCL = searchCoreLength.trim().toLowerCase();
     const safe = (v) => (v ? String(v).toLowerCase() : "");
     return records.filter(r => {
       /* year filter */
@@ -703,13 +552,20 @@ export default function QualityRecordView() {
         const d = new Date(r.date || r.createdAt);
         if (isNaN(d) || d.getFullYear().toString() !== selectedYear.toString()) return false;
       }
-      if (!t) return true;
+      
       const it  = r.inspectionTesting  || {};
       const wd  = r.windingDetails     || {};
       const at  = r.assemblingTesting  || {};
       const ef  = r.efficiencyDetails  || {};
+      const cd  = r.coreDetails        || {};
       const cnd = r.conditionDetails   || {};
       const prd = r.processDetails     || {};
+
+      if (tCD && !safe(cd.coreDia).includes(tCD)) return false;
+      if (tCL && !safe(cd.coreLength).includes(tCL)) return false;
+
+      if (!t) return true;
+
       return (
         safe(r.companyName).includes(t)       ||
         safe(r.srfNumber).includes(t)         ||
@@ -734,7 +590,7 @@ export default function QualityRecordView() {
         safe(prd.dismantled).includes(t)
       );
     });
-  }, [records, searchTerm, selectedYear]);
+  }, [records, searchTerm, searchCoreDia, searchCoreLength, selectedYear]);
 
   /* ── PDF: single ── */
   const generateSinglePDF = useCallback((rec) => {
@@ -783,7 +639,7 @@ export default function QualityRecordView() {
         <div class="hd"><h1>SENTHIL REWINDING WORKSHOP</h1><p>QUALITY INSPECTION REPORT</p></div>
         <div class="st slate">SECTION 1 — HEADER INFORMATION</div>
         <table class="d"><tr><th>Company</th><td>${fv(r.companyName)}</td><th>SRF No.</th><td>${fv(r.srfNumber)}</td></tr>
-        <tr><th>Date</th><td>${fd(r.date)}</td><th>Serial No.</th><td>${fv(r.serialNumber)}</td></tr>
+        <tr><th>Date</th><td>${fd(r.date)}</td><th>Technician</th><td>${fv(r.technician)}</td></tr>
         <tr><th>Party GP No.</th><td>${fv(r.partyGPNumber)}</td><th>Party GP Date</th><td>${fd(r.partyGPDate)}</td></tr>
         <tr><th>D-Note No.</th><td>${fv(r.dNoteNumber)}</td><th>D-Note Date</th><td>${fd(r.dNoteDate)}</td></tr>
         <tr><th>Bill No.</th><td>${fv(r.billNo)}</td><th>Bill Date</th><td>${fd(r.billDate)}</td></tr>
@@ -806,19 +662,22 @@ export default function QualityRecordView() {
 
         <div class="st amber">SECTION 4 — CONDITION DETAILS</div>
         <table class="d">
-        <tr><th>Bearing No.</th><td>${fv(cnd.bearingNo)}</td><th>Drive End Brg</th><td>${fv(cnd.driveEndBearing)}</td></tr>
-        <tr><th>Non-Drive Brg</th><td>${fv(cnd.nonDriveEndBearing)}</td><th>End Shield</th><td>${fv(cnd.endShieldCondition)}</td></tr>
-        <tr><th>Drive End Cond.</th><td>${fv(cnd.driveEndCondition)}</td><th>Non-Drive Cond.</th><td>${fv(cnd.nonDriveEndCondition)}</td></tr>
-        <tr><th>Shaft Drive</th><td>${fv(cnd.shaftDriveEnd)}</td><th>Shaft Non-Drive</th><td>${fv(cnd.shaftNonDriveEnd)}</td></tr>
-        <tr><th>Growler Test</th><td>${fv(cnd.growlerTest)}</td><th>Rotor</th><td>${fv(cnd.rotor)}</td></tr>
-        <tr><th>Stator Coil</th><td>${fv(cnd.statorCoil)}</td><th>Air Gap</th><td>${fv(cnd.airGap)}</td></tr></table>
+        <tr><th>Brg - Drive End</th><td>${fv(cnd.driveEndBearing)}</td><th>Brg - Non-Drive</th><td>${fv(cnd.nonDriveEndBearing)}</td></tr>
+        <tr><th>Shield - Drive End</th><td>${fv(cnd.driveEndCondition)}</td><th>Shield - Non-Drive</th><td>${fv(cnd.nonDriveEndCondition)}</td></tr>
+        <tr><th>Shaft - Drive End</th><td>${fv(cnd.shaftDriveEnd)}</td><th>Shaft - Non-Drive</th><td>${fv(cnd.shaftNonDriveEnd)}</td></tr>
+        <tr><th>Growler - Rotor</th><td>${fv(cnd.rotor)}</td><th>Growler - Stator</th><td>${fv(cnd.statorCoil)}</td></tr>
+        <tr><th>Rotor Position</th><td>${fv(cnd.rotorPosition)}</td><th>Air Gap</th><td>${fv(cnd.airGap)}</td></tr></table>
 
         <div class="st blue">SECTION 6 — WINDING DETAILS</div>
-        <table class="d"><tr><th>SWG</th><td>${fv(wd.swg)}</td><th>Slot</th><td>${fv(wd.slot)}</td></tr>
-        <tr><th>Winding</th><td>${fv(wd.winding)}</td><th>Pitch</th><td>${fv(wd.pitch)}</td></tr>
-        <tr><th>Turns</th><td>${fv(wd.turns)}</td><th>Total Coils</th><td>${fv(wd.totalCoils)}</td></tr>
-        <tr><th>Total Meter</th><td>${fv(wd.totalMeter)}</td><th>Type</th><td>${fv(wd.windingType)}</td></tr>
-        <tr><th>Material Est.</th><td colspan="3">${fv(wd.materialEstimate)}</td></tr></table>
+        <table class="d"><tr><th>Details</th><th>Existing</th><th>Alteration</th></tr>
+        <tr><td>SWG</td><td>${fv(wd.swg?.existing)}</td><td>${fv(wd.swg?.alteration)}</td></tr>
+        <tr><td>Slot</td><td>${fv(wd.slot?.existing)}</td><td>${fv(wd.slot?.alteration)}</td></tr>
+        <tr><td>Winding</td><td>${fv(wd.winding?.existing)}</td><td>${fv(wd.winding?.alteration)}</td></tr>
+        <tr><td>Pitch</td><td>${fv(wd.pitch?.existing)}</td><td>${fv(wd.pitch?.alteration)}</td></tr>
+        <tr><td>Turns</td><td>${fv(wd.turns?.existing)}</td><td>${fv(wd.turns?.alteration)}</td></tr>
+        <tr><td>Total Coils</td><td>${fv(wd.totalCoils?.existing)}</td><td>${fv(wd.totalCoils?.alteration)}</td></tr>
+        <tr><td>Total Meter</td><td>${fv(wd.totalMeter?.existing)}</td><td>${fv(wd.totalMeter?.alteration)}</td></tr>
+        <tr><td>Material Est.</td><td colspan="2">${fv(wd.materialEstimate)}</td></tr></table>
 
         <div class="st slate">SECTION 7 & 8 — WORK DONE / CAUSE</div>
         <table class="d"><tr><th>Mechanical Work</th><td colspan="3">${fv(r.mechanicalWorkDone)}</td></tr>
@@ -993,6 +852,40 @@ export default function QualityRecordView() {
               />
               {searchTerm && (
                 <button onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Core Dia Search */}
+            <div className="relative shrink-0 w-24 sm:w-28">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Core Dia"
+                value={searchCoreDia}
+                onChange={e => setSearchCoreDia(e.target.value)}
+                className="pl-8 pr-6 py-2 bg-amber-50/50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-700/50"
+              />
+              {searchCoreDia && (
+                <button onClick={() => setSearchCoreDia("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Core Length Search */}
+            <div className="relative shrink-0 w-24 sm:w-28">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Core Len"
+                value={searchCoreLength}
+                onChange={e => setSearchCoreLength(e.target.value)}
+                className="pl-8 pr-6 py-2 bg-amber-50/50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-700/50"
+              />
+              {searchCoreLength && (
+                <button onClick={() => setSearchCoreLength("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
                   <X size={13} />
                 </button>
               )}

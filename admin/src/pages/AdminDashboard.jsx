@@ -67,7 +67,7 @@ export default function AdminDashboard() {
             <Activity className="animate-spin text-blue-600" size={50} />
             <Wrench className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-200" size={20} />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Booting Workshop Terminal...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Booting ...</p>
       </div>
     );
   }
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
               </span>
             </div>
             <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-white uppercase leading-none">
-              COMMAND <span className="text-blue-600">CENTER.</span>
+              Admin <span className="text-blue-600">Dashboard</span>
             </h1>
             <p className="text-slate-400 mt-4 max-w-lg font-medium text-sm leading-relaxed">
               Monitoring <span className="text-white font-bold">{stats.total} total units</span> in the service lifecycle with real-time analytics.

@@ -59,6 +59,7 @@ export default function AdminQualityRecordForm() {
     companyName: "",
     address: "",
     srfNumber: "",
+    technician: "",
     date: "",
     partyGPNumber: "",
     partyGPDate: "",
@@ -66,7 +67,6 @@ export default function AdminQualityRecordForm() {
     dNoteDate: "",
     billNo: "",
     billDate: "",
-    serialNumber: "",
 
     inspectionTesting: {
       make: "", hp: "", kw: "", amps: "", volts: "", phase: "", rpm: "",
@@ -90,8 +90,14 @@ export default function AdminQualityRecordForm() {
     },
 
     windingDetails: {
-      swg: "", slot: "", winding: "", pitch: "", turns: "",
-      totalCoils: "", totalMeter: "", materialEstimate: "", windingType: "",
+      swg: { existing: "", alteration: "" },
+      slot: { existing: "", alteration: "" },
+      winding: { existing: "", alteration: "" },
+      pitch: { existing: "", alteration: "" },
+      turns: { existing: "", alteration: "" },
+      totalCoils: { existing: "", alteration: "" },
+      totalMeter: { existing: "", alteration: "" },
+      materialEstimate: "", windingType: "",
     },
 
     mechanicalWorkDone: "",
@@ -194,12 +200,13 @@ export default function AdminQualityRecordForm() {
       srfNumber:    svc.srfNumber   || prev.srfNumber,
       companyName:  svc.customerName || prev.companyName,
       address:      svc.address      || prev.address,
+      technician:   svc.technician   || prev.technician,
       date:         svc.updatedDate
                       ? new Date(svc.updatedDate).toISOString().split("T")[0]
                       : prev.date,
-      serialNumber: md.serialNumber  || prev.serialNumber,
       inspectionTesting: {
         ...prev.inspectionTesting,
+        slNo:       md.serialNumber || "",
         make:       md.make   || "",
         hp:         md.hp     || "",
         kw:         md.kw     || "",
@@ -275,7 +282,17 @@ export default function AdminQualityRecordForm() {
       coreDetails:        { ...initialState.coreDetails,        ...(record.coreDetails        || {}) },
       conditionDetails:   { ...initialState.conditionDetails,   ...(record.conditionDetails   || {}) },
       paperDetails:       { ...initialState.paperDetails,       ...(record.paperDetails       || {}) },
-      windingDetails:     { ...initialState.windingDetails,     ...(record.windingDetails     || {}) },
+      windingDetails: {
+        swg: typeof record.windingDetails?.swg === 'string' ? { existing: record.windingDetails.swg, alteration: "" } : { ...initialState.windingDetails.swg, ...(record.windingDetails?.swg || {}) },
+        slot: typeof record.windingDetails?.slot === 'string' ? { existing: record.windingDetails.slot, alteration: "" } : { ...initialState.windingDetails.slot, ...(record.windingDetails?.slot || {}) },
+        winding: typeof record.windingDetails?.winding === 'string' ? { existing: record.windingDetails.winding, alteration: "" } : { ...initialState.windingDetails.winding, ...(record.windingDetails?.winding || {}) },
+        pitch: typeof record.windingDetails?.pitch === 'string' ? { existing: record.windingDetails.pitch, alteration: "" } : { ...initialState.windingDetails.pitch, ...(record.windingDetails?.pitch || {}) },
+        turns: typeof record.windingDetails?.turns === 'string' ? { existing: record.windingDetails.turns, alteration: "" } : { ...initialState.windingDetails.turns, ...(record.windingDetails?.turns || {}) },
+        totalCoils: typeof record.windingDetails?.totalCoils === 'string' ? { existing: record.windingDetails.totalCoils, alteration: "" } : { ...initialState.windingDetails.totalCoils, ...(record.windingDetails?.totalCoils || {}) },
+        totalMeter: typeof record.windingDetails?.totalMeter === 'string' ? { existing: record.windingDetails.totalMeter, alteration: "" } : { ...initialState.windingDetails.totalMeter, ...(record.windingDetails?.totalMeter || {}) },
+        materialEstimate: record.windingDetails?.materialEstimate || "",
+        windingType: record.windingDetails?.windingType || "",
+      },
       processDetails:     { ...initialState.processDetails,     ...(record.processDetails     || {}) },
       assemblingTesting:  { ...initialState.assemblingTesting,  ...(record.assemblingTesting  || {}) },
       efficiencyDetails:  { ...initialState.efficiencyDetails,  ...(record.efficiencyDetails  || {}) },
@@ -322,6 +339,9 @@ export default function AdminQualityRecordForm() {
     doc.text(`SRF No: ${record.srfNumber || ""}`, 110, y + 5);
     doc.text(`Date: ${record.date ? new Date(record.date).toLocaleDateString("en-IN") : ""}`, 12, y + 12);
     doc.text(`Party GP No: ${record.partyGPNumber || ""}`, 110, y + 12);
+    if (record.technician) {
+      doc.text(`Tech: ${record.technician}`, 110, y + 18);
+    }
     y += 25;
 
     // Inspection & Testing
@@ -348,11 +368,24 @@ export default function AdminQualityRecordForm() {
       theme: "grid",
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
-      head: [["SWG", "Slot", "Winding", "Pitch", "Turns", "Total Coils", "Total Meter", "Type"]],
-      body: [[wd.swg||"", wd.slot||"", wd.winding||"", wd.pitch||"", wd.turns||"", wd.totalCoils||"", wd.totalMeter||"", wd.windingType||""]],
+      head: [["Details", "Existing", "Alteration"]],
+      body: [
+        ["SWG", wd.swg?.existing||"", wd.swg?.alteration||""],
+        ["Slot", wd.slot?.existing||"", wd.slot?.alteration||""],
+        ["Winding", wd.winding?.existing||"", wd.winding?.alteration||""],
+        ["Pitch", wd.pitch?.existing||"", wd.pitch?.alteration||""],
+        ["Turns", wd.turns?.existing||"", wd.turns?.alteration||""],
+        ["Total Coils", wd.totalCoils?.existing||"", wd.totalCoils?.alteration||""],
+        ["Total Meter", wd.totalMeter?.existing||"", wd.totalMeter?.alteration||""],
+      ],
       margin: { left: 10, right: 10 },
     });
     y = doc.lastAutoTable.finalY + 4;
+    doc.setFont("helvetica", "bold");
+    doc.text("MATERIALS ESTIMATE", 12, y); y += 3;
+    doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+    doc.text(wd.materialEstimate || "", 12, y + 6, { maxWidth: 186 });
+    y += 20;
 
     // Load Testing
     doc.setFont("helvetica", "bold");
@@ -506,8 +539,8 @@ export default function AdminQualityRecordForm() {
                   <FieldRow label="Date">
                     <FInput type="date" value={formData.date ? formData.date.split("T")[0] : ""} onChange={e => top("date", e.target.value)} />
                   </FieldRow>
-                  <FieldRow label="Serial Number">
-                    <FInput value={formData.serialNumber} onChange={e => top("serialNumber", e.target.value)} />
+                  <FieldRow label="Technician">
+                    <FInput value={formData.technician} onChange={e => top("technician", e.target.value)} />
                   </FieldRow>
                 </div>
                 <div>
@@ -579,30 +612,57 @@ export default function AdminQualityRecordForm() {
               </div>
 
               {/* ══ SECTION 4: CONDITION DETAILS ══ */}
-              <SectionTitle>Section 4 — Condition Details</SectionTitle>
-              <div className="grid grid-cols-2 md:grid-cols-3 border-b border-blue-200">
-                {[
-                  ["Bearing No.",         "bearingNo"],
-                  ["Drive End Bearing",   "driveEndBearing"],
-                  ["Non-Drive End Brg",   "nonDriveEndBearing"],
-                  ["End Shield Cond.",    "endShieldCondition"],
-                  ["Drive End Cond.",     "driveEndCondition"],
-                  ["Non-Drive End Cond.", "nonDriveEndCondition"],
-                  ["Shaft Drive End",     "shaftDriveEnd"],
-                  ["Shaft Non-Drive",     "shaftNonDriveEnd"],
-                  ["Growler Test",        "growlerTest"],
-                  ["Rotor",               "rotor"],
-                  ["Stator Coil",         "statorCoil"],
-                  ["Rotor Position",      "rotorPosition"],
-                  ["Air Gap",             "airGap"],
-                ].map(([label, field], i) => (
-                  <div key={field} className={`border-b border-r border-blue-100 flex items-center min-h-[28px] ${i % 3 === 2 ? "border-r-0" : ""}`}>
-                    <span className="text-[9px] font-black text-slate-500 uppercase w-[100px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
-                    <div className="flex-1 px-2 py-0.5">
-                      <FInput value={formData.conditionDetails[field]} onChange={e => nested("conditionDetails", field, e.target.value)} />
+              <SectionTitle>Section 4 — Name of Part / Condition (conditionDetails)</SectionTitle>
+              <div className="flex flex-col border-b border-blue-200">
+                 {/* 1. Bearing No */}
+                 <div className="flex flex-col sm:flex-row border-b border-blue-100">
+                    <div className="w-full sm:w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">1. Bearing No.</div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2">
+                       <FieldRow label="a) Drive End" half><FInput value={formData.conditionDetails.driveEndBearing} onChange={e => nested("conditionDetails", "driveEndBearing", e.target.value)} /></FieldRow>
+                       <FieldRow label="b) Non Drive End" half><FInput value={formData.conditionDetails.nonDriveEndBearing} onChange={e => nested("conditionDetails", "nonDriveEndBearing", e.target.value)} /></FieldRow>
                     </div>
-                  </div>
-                ))}
+                 </div>
+
+                 {/* 2. End Shield Condition */}
+                 <div className="flex flex-col sm:flex-row border-b border-blue-100">
+                    <div className="w-full sm:w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">2. End Shield Condition</div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2">
+                       <FieldRow label="a) Drive End" half><FInput value={formData.conditionDetails.driveEndCondition} onChange={e => nested("conditionDetails", "driveEndCondition", e.target.value)} /></FieldRow>
+                       <FieldRow label="b) Non Drive End" half><FInput value={formData.conditionDetails.nonDriveEndCondition} onChange={e => nested("conditionDetails", "nonDriveEndCondition", e.target.value)} /></FieldRow>
+                    </div>
+                 </div>
+
+                 {/* 3. Shaft Condition */}
+                 <div className="flex flex-col sm:flex-row border-b border-blue-100">
+                    <div className="w-full sm:w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">3. Shaft Condition</div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2">
+                       <FieldRow label="a) Drive End" half><FInput value={formData.conditionDetails.shaftDriveEnd} onChange={e => nested("conditionDetails", "shaftDriveEnd", e.target.value)} /></FieldRow>
+                       <FieldRow label="b) Non Drive End" half><FInput value={formData.conditionDetails.shaftNonDriveEnd} onChange={e => nested("conditionDetails", "shaftNonDriveEnd", e.target.value)} /></FieldRow>
+                    </div>
+                 </div>
+
+                 {/* 4. Growler Test */}
+                 <div className="flex flex-col sm:flex-row border-b border-blue-100">
+                    <div className="w-full sm:w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">4. Growler Test</div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2">
+                       <FieldRow label="a) Rotor" half><FInput value={formData.conditionDetails.rotor} onChange={e => nested("conditionDetails", "rotor", e.target.value)} /></FieldRow>
+                       <FieldRow label="b) Stator Coil" half><FInput value={formData.conditionDetails.statorCoil} onChange={e => nested("conditionDetails", "statorCoil", e.target.value)} /></FieldRow>
+                    </div>
+                 </div>
+
+                 {/* 5. Rotor Position & 6. Air Gap */}
+                 <div className="flex flex-col sm:flex-row border-b border-blue-100">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2">
+                       <div className="flex">
+                           <div className="w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">5. Rotor Position</div>
+                           <div className="flex-1 border-r border-blue-100 px-2"><FInput value={formData.conditionDetails.rotorPosition} onChange={e => nested("conditionDetails", "rotorPosition", e.target.value)} /></div>
+                       </div>
+                       <div className="flex">
+                           <div className="w-[130px] px-3 py-1 bg-slate-50 font-bold text-slate-700 text-[9px] flex items-center border-r border-blue-100 uppercase">6. Air Gap</div>
+                           <div className="flex-1 px-2"><FInput value={formData.conditionDetails.airGap} onChange={e => nested("conditionDetails", "airGap", e.target.value)} /></div>
+                       </div>
+                    </div>
+                 </div>
               </div>
 
               {/* ══ SECTION 5: PAPER DETAILS ══ */}
@@ -626,31 +686,52 @@ export default function AdminQualityRecordForm() {
 
               {/* ══ SECTION 6: WINDING DETAILS ══ */}
               <SectionTitle>Section 6 — Winding Details</SectionTitle>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 border-b border-blue-200">
-                {[
-                  ["SWG",              "swg"],
-                  ["Slot",             "slot"],
-                  ["Winding",          "winding"],
-                  ["Pitch",            "pitch"],
-                  ["Turns",            "turns"],
-                  ["Total Coils",      "totalCoils"],
-                  ["Total Meter",      "totalMeter"],
-                  ["Winding Type",     "windingType"],
-                ].map(([label, field]) => (
-                  <div key={field} className="border-b border-r border-blue-100 flex items-center min-h-[28px]">
-                    <span className="text-[9px] font-black text-slate-500 uppercase w-[75px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100 leading-tight">{label}</span>
-                    <div className="flex-1 px-2 py-0.5">
-                      <FInput value={formData.windingDetails[field]} onChange={e => nested("windingDetails", field, e.target.value)} />
+              <div className="flex flex-col md:flex-row border-b border-blue-200">
+                 {/* Table Side */}
+                 <div className="flex-1 border-r border-blue-200 overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-[11px]">
+                       <thead>
+                          <tr className="bg-slate-50">
+                             <th className="border-b border-r border-blue-100 p-2 text-slate-500 w-[140px] uppercase font-black text-[9px] text-center">Details</th>
+                             <th className="border-b border-r border-blue-100 p-2 text-slate-500 w-[120px] uppercase font-black text-[9px] text-center">Existing</th>
+                             <th className="border-b border-blue-100 p-2 text-slate-500 w-[120px] uppercase font-black text-[9px] text-center">Alteration</th>
+                          </tr>
+                       </thead>
+                       <tbody>
+                          {[
+                             ["SWG", "swg"],
+                             ["Slot", "slot"],
+                             ["Winding", "winding"],
+                             ["Pitch", "pitch"],
+                             ["Turns/Slot", "turns"],
+                             ["Total No. of Coils", "totalCoils"],
+                             ["Total mt.", "totalMeter"],
+                          ].map(([label, field]) => (
+                             <tr key={field}>
+                                <td className="border-b border-r border-blue-100 px-3 py-1.5 font-bold text-slate-600 bg-slate-50/50">{label}</td>
+                                <td className="border-b border-r border-blue-100 p-0 text-center">
+                                   <input value={formData.windingDetails[field]?.existing || ""} onChange={e => setFormData(p => ({...p, windingDetails: {...p.windingDetails, [field]: {...(p.windingDetails[field] || {}), existing: e.target.value}}}))} className="w-full h-full p-1.5 text-center outline-none bg-transparent" />
+                                </td>
+                                <td className="border-b border-blue-100 p-0 text-center">
+                                   <input value={formData.windingDetails[field]?.alteration || ""} onChange={e => setFormData(p => ({...p, windingDetails: {...p.windingDetails, [field]: {...(p.windingDetails[field] || {}), alteration: e.target.value}}}))} className="w-full h-full p-1.5 text-center outline-none bg-transparent" />
+                                </td>
+                             </tr>
+                          ))}
+                       </tbody>
+                    </table>
+                 </div>
+                 {/* Materials Estimate Side */}
+                 <div className="w-full md:w-[320px] flex flex-col bg-white">
+                    <div className="bg-blue-50/50 px-3 py-2 font-black text-blue-800 border-b border-blue-100 text-center uppercase tracking-widest text-[9px]">
+                       Materials Estimate
                     </div>
-                  </div>
-                ))}
-              </div>
-              {/* Material Estimate — full width */}
-              <div className="border-b border-blue-200 flex">
-                <span className="text-[9px] font-black text-slate-500 uppercase w-[120px] shrink-0 px-2 py-2 bg-slate-50 border-r border-blue-100">Material Estimate</span>
-                <div className="flex-1 px-3 py-2">
-                  <FTextarea rows={3} value={formData.windingDetails.materialEstimate} onChange={e => nested("windingDetails", "materialEstimate", e.target.value)} placeholder="List materials, quantities..." />
-                </div>
+                    <textarea 
+                       value={formData.windingDetails.materialEstimate || ""}
+                       onChange={e => setFormData(p => ({...p, windingDetails: {...p.windingDetails, materialEstimate: e.target.value}}))}
+                       className="flex-1 w-full p-3 outline-none resize-none text-[12px] bg-transparent leading-relaxed"
+                       placeholder="List materials and quantities here..."
+                    />
+                 </div>
               </div>
 
               {/* ══ SECTIONS 7 & 8: MECHANICAL WORK + CAUSE OF FAILURE ══ */}

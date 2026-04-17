@@ -15,6 +15,7 @@ const qualityRecordSchema = new mongoose.Schema({
   companyName: String,
   address: String,
   srfNumber: String,
+  technician: String,
   date:        { type: Date, default: null },
   partyGPNumber: String,
   partyGPDate: { type: Date, default: null },
@@ -83,13 +84,13 @@ const qualityRecordSchema = new mongoose.Schema({
   /* ───────── WINDING DETAILS ───────── */
   /* ✅ type:{} wrapper remove பண்ணினோம் */
   windingDetails: {
-    swg:              String,
-    slot:             String,
-    winding:          String,
-    pitch:            String,
-    turns:            String,
-    totalCoils:       String,
-    totalMeter:       String,
+    swg:        { existing: String, alteration: String },
+    slot:       { existing: String, alteration: String },
+    winding:    { existing: String, alteration: String },
+    pitch:      { existing: String, alteration: String },
+    turns:      { existing: String, alteration: String },
+    totalCoils: { existing: String, alteration: String },
+    totalMeter: { existing: String, alteration: String },
     materialEstimate: String,
     windingType:      String,
   },

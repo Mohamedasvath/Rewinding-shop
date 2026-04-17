@@ -130,7 +130,7 @@ export default function AdminServices() {
     address: "", date: "",
     make: "", hp: "", rpm: "", kw: "", volts: "", amps: "",
     phase: "", type: "", ins: "", frame: "",
-    serialNumber: "", gatePassNumber: "",
+    serialNumber: "", gatePassNumber: "", gatePassDate: "",
     technician: "", stage: "",
     natureOfComplaint: "", sparesReceived: ""
   };
@@ -214,6 +214,7 @@ export default function AdminServices() {
       ins: s.motorDetails?.ins || "", frame: s.motorDetails?.frame || "",
       serialNumber: s.motorDetails?.serialNumber || "",
       gatePassNumber: s.motorDetails?.gatePassNumber || "",
+      gatePassDate: s.motorDetails?.gatePassDate ? new Date(s.motorDetails.gatePassDate).toISOString().split("T")[0] : "",
       technician: s.technician || "", stage: s.stage || "",
       natureOfComplaint: s.natureOfComplaint || "",
       sparesReceived: s.sparesReceived || "",
@@ -243,6 +244,7 @@ export default function AdminServices() {
           volts: form.volts, amps: form.amps, phase: form.phase,
           type: form.type, ins: form.ins, frame: form.frame,
           serialNumber: form.serialNumber, gatePassNumber: form.gatePassNumber,
+          gatePassDate: form.gatePassDate || null,
         },
         natureOfComplaint: form.natureOfComplaint,
         sparesReceived: form.sparesReceived,
@@ -275,6 +277,7 @@ export default function AdminServices() {
       ins: s.motorDetails?.ins || "", frame: s.motorDetails?.frame || "",
       serialNumber: s.motorDetails?.serialNumber || "",
       gatePassNumber: s.motorDetails?.gatePassNumber || "",
+      gatePassDate: s.motorDetails?.gatePassDate ? new Date(s.motorDetails.gatePassDate).toISOString().split("T")[0] : "",
       technician: s.technician || "", stage: s.stage || "",
       natureOfComplaint: s.natureOfComplaint || "",
       sparesReceived: s.sparesReceived || "",
@@ -385,19 +388,25 @@ export default function AdminServices() {
 
                     {/* SRF */}
                     <td className="px-3 py-3">
-                      <p className="font-black text-slate-900 text-sm leading-tight">{s.srfNumber}</p>
-                      <p
-                        className="text-[10px] font-bold text-blue-500 mt-0.5 cursor-pointer hover:text-blue-700 hover:underline transition-colors"
-                        title="Click to copy tracking code"
-                        onClick={() => {
-                          if (s.trackingCode) {
-                            navigator.clipboard.writeText(s.trackingCode);
-                            toast.success("Tracking code copied");
-                          }
-                        }}
-                      >
-                        {s.trackingCode || "—"}
-                      </p>
+                      <div className="inline-flex flex-col items-start gap-1.5">
+                        <span className="font-black text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md text-sm shadow-sm">
+                          {s.srfNumber}
+                        </span>
+                        {s.trackingCode ? (
+                          <span
+                            className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded cursor-pointer hover:bg-emerald-100 transition-colors shadow-sm"
+                            title="Click to copy tracking code"
+                            onClick={() => {
+                              navigator.clipboard.writeText(s.trackingCode);
+                              toast.success("Tracking code copied");
+                            }}
+                          >
+                            TrkN: {s.trackingCode}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-slate-300 uppercase font-black tracking-widest pl-1">No Tracking</span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Customer */}
@@ -439,6 +448,7 @@ export default function AdminServices() {
                         <MotorField label="Frame" value={s.motorDetails?.frame} />
                         <MotorField label="S/N" value={s.motorDetails?.serialNumber} />
                         <MotorField label="G.P." value={s.motorDetails?.gatePassNumber} />
+                        <MotorField label="G.P. Date" value={s.motorDetails?.gatePassDate ? new Date(s.motorDetails.gatePassDate).toLocaleDateString("en-IN") : null} />
                       </div>
                     </td>
 
@@ -608,6 +618,19 @@ export default function AdminServices() {
                       value={form.address} onChange={e => setField("address", e.target.value)}
                     />
                   </div>
+
+                  {/* Gate Pass Block */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormInput label="Gate Pass Number" placeholder="e.g. GP-001"
+                      value={form.gatePassNumber} mono onChange={e => setField("gatePassNumber", e.target.value)}
+                    />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gate Pass Date</label>
+                      <input type="date" value={form.gatePassDate} onChange={e => setField("gatePassDate", e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* ── ROW 2: Complaints ── */}
@@ -638,7 +661,6 @@ export default function AdminServices() {
                     <FormInput label="Insulation" placeholder="e.g. F" value={form.ins} onChange={e => setField("ins", e.target.value)} />
                     <FormInput label="Frame" placeholder="e.g. 132M" value={form.frame} onChange={e => setField("frame", e.target.value)} />
                     <FormInput label="Serial Number" placeholder="S/N" value={form.serialNumber} mono onChange={e => setField("serialNumber", e.target.value)} />
-                    <FormInput label="Gate Pass No." placeholder="G.P." value={form.gatePassNumber} mono onChange={e => setField("gatePassNumber", e.target.value)} />
                   </div>
                 </div>
 

@@ -12,8 +12,17 @@ const motorDetailsSchema = new mongoose.Schema({
   ins: String,
   frame: String,
   serialNumber: String,
-  gatePassNumber: String
+  gatePassNumber: String,
+  gatePassDate: String
 }, { _id: false });
+
+const workHistoryEntrySchema = new mongoose.Schema({
+  technician: String,
+  stage: String,
+  startedAt: { type: Date, default: Date.now },
+  endedAt: { type: Date, default: null },
+  note: String,
+}, { _id: true });
 
 const serviceSchema = new mongoose.Schema({
   /* MANUAL ENTRY */
@@ -26,7 +35,7 @@ const serviceSchema = new mongoose.Schema({
   phone: String,
   gstNumber: String,
 
-  /* MOTOR DETAILS - defined as separate schema to avoid casting issues */
+  /* MOTOR DETAILS */
   motorDetails: { type: motorDetailsSchema, default: () => ({}) },
 
   natureOfComplaint: String,
@@ -39,6 +48,9 @@ const serviceSchema = new mongoose.Schema({
   updatedDate: { type: Date, default: Date.now },
 
   technician: String,
+
+  /* WORK HISTORY — log every technician/stage change */
+  workHistory: { type: [workHistoryEntrySchema], default: [] },
 
   /* DELIVERY CHALLAN */
   deliveryChallan: {
