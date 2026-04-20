@@ -212,13 +212,15 @@ export const updateService = async (req, res, next) => {
         lastEntry.endedAt = now;
       }
 
-      // Push a new history entry
-      service.workHistory.push({
-        technician: incomingTech  || service.technician,
-        stage:      incomingStage || service.stage,
-        startedAt:  now,
-        endedAt:    null,
-      });
+      // Push a new history entry only if there is a technician assigned
+      if (incomingTech) {
+        service.workHistory.push({
+          technician: incomingTech,
+          stage:      incomingStage,
+          startedAt:  now,
+          endedAt:    null,
+        });
+      }
     }
 
     // Apply the actual field updates
