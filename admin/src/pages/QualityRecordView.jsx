@@ -481,6 +481,8 @@ export default function QualityRecordView() {
   const [searchTerm, setSearchTerm]     = useState("");
   const [searchCoreDia, setSearchCoreDia]       = useState("");
   const [searchCoreLength, setSearchCoreLength] = useState("");
+  const [searchMake, setSearchMake]             = useState("");
+  const [searchHP, setSearchHP]                 = useState("");
   const [selectedYear, setSelectedYear] = useState("All");
   const [expandedId, setExpandedId]     = useState(null);
 
@@ -545,12 +547,16 @@ export default function QualityRecordView() {
     const t = searchTerm.trim().toLowerCase();
     const tCD = searchCoreDia.trim().toLowerCase();
     const tCL = searchCoreLength.trim().toLowerCase();
+    const tMake = searchMake.trim().toLowerCase();
+    const tHP = searchHP.trim().toLowerCase();
+
     const safe = (v) => (v ? String(v).toLowerCase() : "");
+
     return records.filter(r => {
-      /* year filter */
+      // 1. Year Filter
       if (selectedYear !== "All") {
         const d = new Date(r.date || r.createdAt);
-        if (isNaN(d) || d.getFullYear().toString() !== selectedYear.toString()) return false;
+        if (isNaN(d) || d.getFullYear().toString() !== selectedYear) return false;
       }
       
       const it  = r.inspectionTesting  || {};
@@ -561,9 +567,13 @@ export default function QualityRecordView() {
       const cnd = r.conditionDetails   || {};
       const prd = r.processDetails     || {};
 
+      // 2. Specific Filters (AND logic)
       if (tCD && !safe(cd.coreDia).includes(tCD)) return false;
       if (tCL && !safe(cd.coreLength).includes(tCL)) return false;
+      if (tMake && !safe(it.make).includes(tMake)) return false;
+      if (tHP && !safe(it.hp).includes(tHP)) return false;
 
+      // 3. Universal Search (OR logic among fields)
       if (!t) return true;
 
       return (
@@ -573,24 +583,27 @@ export default function QualityRecordView() {
         safe(r.partyGPNumber).includes(t)     ||
         safe(r.dNoteNumber).includes(t)       ||
         safe(r.billNo).includes(t)            ||
-        safe(r.serialNumber).includes(t)      ||
-        safe(r.mechanicalWorkDone).includes(t)||
-        safe(r.causeOfFailure).includes(t)    ||
-        safe(r.connectionDetails).includes(t) ||
-        safe(r.authorizedSignature).includes(t)||
         safe(it.make).includes(t)             ||
         safe(it.type).includes(t)             ||
         safe(it.slNo).includes(t)             ||
-        safe(wd.swg).includes(t)              ||
+        safe(it.hp).includes(t)               ||
+        safe(r.technician).includes(t)        ||
+        safe(r.mechanicalWorkDone).includes(t)||
+        safe(r.causeOfFailure).includes(t)    ||
+        // Check nested winding details
+        safe(wd.swg?.existing).includes(t)    ||
+        safe(wd.swg?.alteration).includes(t)  ||
+        safe(wd.slot?.existing).includes(t)   ||
+        safe(wd.slot?.alteration).includes(t) ||
         safe(wd.windingType).includes(t)      ||
         safe(wd.materialEstimate).includes(t) ||
-        safe(at.hvTest).includes(t)           ||
-        safe(ef.efficiency).includes(t)       ||
-        safe(cnd.bearingNo).includes(t)       ||
-        safe(prd.dismantled).includes(t)
+        // Process details
+        safe(prd.dismantled).includes(t)      ||
+        safe(prd.rewound).includes(t)         ||
+        safe(prd.assembled).includes(t)
       );
     });
-  }, [records, searchTerm, searchCoreDia, searchCoreLength, selectedYear]);
+  }, [records, searchTerm, searchCoreDia, searchCoreLength, searchMake, searchHP, selectedYear]);
 
   /* ── PDF: single ── */
   const generateSinglePDF = useCallback((rec) => {
@@ -891,6 +904,40 @@ export default function QualityRecordView() {
               )}
             </div>
 
+            {/* Make Search */}
+            <div className="relative shrink-0 w-24 sm:w-28">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Make"
+                value={searchMake}
+                onChange={e => setSearchMake(e.target.value)}
+                className="pl-8 pr-6 py-2 bg-blue-50/50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-700/50"
+              />
+              {searchMake && (
+                <button onClick={() => setSearchMake("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* HP Search */}
+            <div className="relative shrink-0 w-20 sm:w-24">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="HP"
+                value={searchHP}
+                onChange={e => setSearchHP(e.target.value)}
+                className="pl-8 pr-6 py-2 bg-blue-50/50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-700/50"
+              />
+              {searchHP && (
+                <button onClick={() => setSearchHP("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
             {/* Year Filter */}
             <div className="relative shrink-0">
               <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -934,10 +981,18 @@ export default function QualityRecordView() {
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Loading Records...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-3">
+          <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-3 text-center">
             <FileText size={52} className="text-slate-200" />
-            <p className="font-bold text-sm">No records found</p>
-            {searchTerm && <p className="text-xs">Try clearing the search term</p>}
+            <p className="font-bold text-sm text-slate-600 uppercase tracking-tight">No records found matching criteria</p>
+            <div className="text-xs space-y-1">
+              {searchTerm && <p>• Universal search: "{searchTerm}"</p>}
+              {(searchCoreDia || searchCoreLength) && <p>• Dimensions: {searchCoreDia || "Any"} × {searchCoreLength || "Any"}</p>}
+              {(searchMake || searchHP) && <p>• Motor: {searchMake || "Any"} ({searchHP || "Any"} HP)</p>}
+              {selectedYear !== "All" && <p>• Year: {selectedYear}</p>}
+              <p className="mt-4 font-semibold text-blue-600 cursor-pointer hover:underline" onClick={() => {
+                setSearchTerm(""); setSearchCoreDia(""); setSearchCoreLength(""); setSearchMake(""); setSearchHP(""); setSelectedYear("All");
+              }}>Clear all filters</p>
+            </div>
           </div>
         ) : (
           filtered.map((rec) => {

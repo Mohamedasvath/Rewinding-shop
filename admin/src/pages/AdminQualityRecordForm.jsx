@@ -136,6 +136,7 @@ export default function AdminQualityRecordForm() {
 
   /* ─── SERVICE LIST FOR SRF DROPDOWN ─── */
   const [serviceList, setServiceList] = useState([]);
+  const [techSuggestions, setTechSuggestions] = useState([]);
 
   /* ─── FETCH ─── */
   const fetchRecords = async () => {
@@ -190,11 +191,27 @@ export default function AdminQualityRecordForm() {
   const handleSRFSelect = (srfNumber) => {
     const svc = serviceList.find(s => s.srfNumber === srfNumber);
     if (!svc) {
-      // Manual entry — just update srfNumber, leave everything else
       top("srfNumber", srfNumber);
+      setTechSuggestions([]);
       return;
     }
+
     const md = svc.motorDetails || {};
+    const history = svc.workHistory || [];
+
+    // 1. Get all unique technicians who touched this motor for suggestions
+    const historyTechs = [...new Set(history.map(h => h.technician).filter(Boolean))];
+    if (svc.technician && !historyTechs.includes(svc.technician)) {
+      historyTechs.push(svc.technician);
+    }
+    setTechSuggestions(historyTechs);
+
+    // 2. Find specific technicians for Section 9 based on workHistory
+    const findLastTechFor = (stage) => {
+      const entry = [...history].reverse().find(h => h.stage === stage);
+      return entry ? entry.technician : "";
+    };
+
     setFormData(prev => ({
       ...prev,
       srfNumber:    svc.srfNumber   || prev.srfNumber,
@@ -204,6 +221,16 @@ export default function AdminQualityRecordForm() {
       date:         svc.updatedDate
                       ? new Date(svc.updatedDate).toISOString().split("T")[0]
                       : prev.date,
+      
+      // Auto-fill Section 9 Process Details
+      processDetails: {
+        ...prev.processDetails,
+        dismantled: findLastTechFor("Dismantling") || findLastTechFor("Inspection") || svc.technician || "",
+        rewound:    findLastTechFor("Rewinding")   || "",
+        assembled:  findLastTechFor("Assembling")  || "",
+        wireRemoved: findLastTechFor("Dismantling") || "",
+      },
+
       inspectionTesting: {
         ...prev.inspectionTesting,
         slNo:       md.serialNumber || "",
@@ -540,7 +567,18 @@ export default function AdminQualityRecordForm() {
                     <FInput type="date" value={formData.date ? formData.date.split("T")[0] : ""} onChange={e => top("date", e.target.value)} />
                   </FieldRow>
                   <FieldRow label="Technician">
-                    <FInput value={formData.technician} onChange={e => top("technician", e.target.value)} />
+                    <input
+                      list="tech-list"
+                      value={formData.technician}
+                      onChange={e => top("technician", e.target.value)}
+                      placeholder="Type or select technician..."
+                      className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-300"
+                    />
+                    <datalist id="tech-list">
+                      {techSuggestions.map(t => (
+                        <option key={t} value={t} />
+                      ))}
+                    </datalist>
                   </FieldRow>
                 </div>
                 <div>
@@ -762,7 +800,17 @@ export default function AdminQualityRecordForm() {
                   <div key={field} className={`border-r border-blue-100 flex items-center min-h-[28px] ${i === 3 ? "border-r-0" : ""}`}>
                     <span className="text-[9px] font-black text-slate-500 uppercase w-[80px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
                     <div className="flex-1 px-2 py-0.5">
-                      <FInput value={formData.processDetails[field]} onChange={e => nested("processDetails", field, e.target.value)} />
+                      <input
+                        list={`tech-list-${field}`}
+                        value={formData.processDetails[field]}
+                        onChange={e => nested("processDetails", field, e.target.value)}
+                        className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-400"
+                      />
+                      <datalist id={`tech-list-${field}`}>
+                        {techSuggestions.map(t => (
+                          <option key={t} value={t} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
                 ))}
