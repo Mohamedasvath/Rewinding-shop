@@ -19,10 +19,25 @@ import {
   Zap,
   AlertCircle,
   Package,
+  X,
+  Filter,
+  Tag,
+  Layers,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+/* ─── Financial year label helper ─── */
+const getFinancialYear = (date) => {
+  const d = new Date(date);
+  if (isNaN(d)) return null;
+  const y = d.getFullYear();
+  const m = d.getMonth(); // 0-indexed
+  // April (3) onward → FY starts this year
+  return m >= 3 ? `${y}-${String(y + 1).slice(2)}` : `${y - 1}-${String(y).slice(2)}`;
+};
 
 /* ─────────────── MOTOR FIELD (matches AdminServices style) ─────────────── */
 const MotorField = ({ label, value }) => (
@@ -32,11 +47,10 @@ const MotorField = ({ label, value }) => (
     </span>
 
     <span
-      className={`text-[12px] leading-snug ${
-        value
+      className={`text-[12px] leading-snug ${value
           ? "text-slate-700 font-medium"
           : "text-slate-300 italic"
-      }`}
+        }`}
     >
       {value || "Not specified"}
     </span>
@@ -52,6 +66,12 @@ export default function AllCustomers() {
   const [selectedMonth, setSelectedMonth] = useState("All");
   const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
+
+  /* ─── NEW FILTER STATES ─── */
+  const [selectedStatus, setSelectedStatus]   = useState("All");  // filters by s.stage keyword group
+  const [selectedStage, setSelectedStage]     = useState("All");  // filters by exact s.stage value
+  const [selectedFY, setSelectedFY]           = useState("All");  // filters by financial year
+  const [openFilter, setOpenFilter]           = useState(null);   // which dropdown is open: "status"|"stage"|"fy"|"year"|null
 
   /* ─── PASSWORD LOCK ─── */
   const CORRECT_PASSWORD = "admin123";
@@ -115,17 +135,62 @@ export default function AllCustomers() {
     return unique.sort((a, b) => b - a);
   }, [services]);
 
-  /* ─── GLOBAL SEARCH + YEAR FILTER (useMemo) ─── */
+  /* ─── FINANCIAL YEAR OPTIONS ─── */
+  const financialYears = useMemo(() => {
+    const fys = [...new Set(
+      services.map(s => getFinancialYear(s.updatedDate || s.createdAt)).filter(Boolean)
+    )];
+    return fys.sort((a, b) => b.localeCompare(a));
+  }, [services]);
+
+  /* ─── UNIQUE STAGE VALUES (exact) ─── */
+  const stageOptions = useMemo(() => {
+    const vals = [...new Set(services.map(s => s.stage).filter(Boolean))];
+    return vals.sort();
+  }, [services]);
+
+  /* ─── STATUS GROUPS ─── */
+  const STATUS_GROUPS = [
+    { label: "Completed",  match: (st) => /complete|finish|deliver/i.test(st || ""), color: "emerald" },
+    { label: "Pending",    match: (st) => /pending/i.test(st || ""),                  color: "amber"   },
+    { label: "In Process", match: (st) => /process/i.test(st || ""),                  color: "blue"    },
+    { label: "Cancelled",  match: (st) => /cancel|reject/i.test(st || ""),            color: "red"     },
+  ];
+
+  /* ─── CLEAR ALL FILTERS ─── */
+  const clearAllFilters = () => {
+    setSearch(""); setSelectedYear("All"); setSelectedStatus("All");
+    setSelectedStage("All"); setSelectedFY("All"); setOpenFilter(null);
+  };
+
+  const hasActiveFilters = search || selectedYear !== "All" || selectedStatus !== "All" ||
+    selectedStage !== "All" || selectedFY !== "All";
+
+  /* ─── GLOBAL SEARCH + ALL FILTERS (useMemo) ─── */
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     const safe = (val) => (val != null ? val.toString().toLowerCase() : "");
 
     return services.filter((s) => {
       const date = new Date(s.updatedDate || s.createdAt);
-      const yearOk = selectedYear === "All" || date.getFullYear().toString() === selectedYear;
-      if (!yearOk) return false;
-      if (!term) return true;
 
+      // Calendar year filter
+      if (selectedYear !== "All" && date.getFullYear().toString() !== selectedYear) return false;
+
+      // Financial year filter
+      if (selectedFY !== "All" && getFinancialYear(s.updatedDate || s.createdAt) !== selectedFY) return false;
+
+      // Status group filter
+      if (selectedStatus !== "All") {
+        const group = STATUS_GROUPS.find(g => g.label === selectedStatus);
+        if (group && !group.match(s.stage)) return false;
+      }
+
+      // Exact stage filter
+      if (selectedStage !== "All" && (s.stage || "") !== selectedStage) return false;
+
+      // Text search
+      if (!term) return true;
       const md = s.motorDetails || {};
       return (
         safe(s.srfNumber).includes(term) ||
@@ -152,7 +217,7 @@ export default function AllCustomers() {
         safe(s.deliveryChallan?.receiverName).includes(term)
       );
     });
-  }, [services, search, selectedYear]);
+  }, [services, search, selectedYear, selectedFY, selectedStatus, selectedStage]);
 
   const completedServices = useMemo(
     () => services.filter(s => isCompleted(s.stage)),
@@ -213,7 +278,7 @@ export default function AllCustomers() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    
+
 
     // Accent line
     doc.setDrawColor(59, 130, 246);
@@ -547,80 +612,218 @@ export default function AllCustomers() {
   /* ══════════════════════════════════════════════
      RENDER
   ══════════════════════════════════════════════ */
+  /* ─── DROPDOWN HELPER ─── */
+  const FilterDropdown = ({ id, label, icon: Icon, value, options, onChange, colorFn }) => {
+    const isOpen = openFilter === id;
+    const isActive = value !== "All";
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setOpenFilter(isOpen ? null : id)}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+            isActive
+              ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200"
+              : "bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+          }`}
+        >
+          <Icon size={15} />
+          <span className="hidden sm:inline">{label}</span>
+          {isActive && (
+            <span className="bg-white/30 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full max-w-[80px] truncate">
+              {value}
+            </span>
+          )}
+          {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <div className="fixed inset-0 z-10" onClick={() => setOpenFilter(null)} />
+            <div className="absolute top-full left-0 mt-1.5 z-20 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden min-w-[170px]">
+              <div className="px-3 py-2 border-b border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+              </div>
+              <div className="max-h-52 overflow-y-auto">
+                <button
+                  onClick={() => { onChange("All"); setOpenFilter(null); }}
+                  className={`w-full text-left px-3 py-2 text-sm font-semibold transition-colors hover:bg-slate-50 ${
+                    value === "All" ? "text-blue-600 bg-blue-50" : "text-slate-600"
+                  }`}
+                >
+                  All {label}s
+                </button>
+                {options.map(opt => (
+                  <button
+                    key={opt.value ?? opt}
+                    onClick={() => { onChange(opt.value ?? opt); setOpenFilter(null); }}
+                    className={`w-full text-left px-3 py-2 text-sm font-semibold transition-colors hover:bg-slate-50 flex items-center justify-between ${
+                      value === (opt.value ?? opt) ? "text-blue-600 bg-blue-50" : "text-slate-700"
+                    }`}
+                  >
+                    <span>{opt.label ?? opt}</span>
+                    {opt.color && (
+                      <span className={`w-2 h-2 rounded-full bg-${opt.color}-500`} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <div className="p-4 md:p-6">
 
         {/* ── HEADER ── */}
-        <div className="max-w-[1400px] mx-auto mb-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-                <div className="p-2 bg-blue-600 rounded-xl shadow-md shadow-blue-200">
-                  <Wrench size={20} className="text-white" />
-                </div>
-                ALL CUSTOMERS
-              </h1>
-              <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mt-0.5">
-                {filtered.length} of {services.length} records
-                {selectedYear !== "All" && ` · ${selectedYear}`}
-              </p>
-            </div>
+        <div className="max-w-[1400px] mx-auto mb-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 px-4 sm:px-6 py-4 space-y-3">
 
-            {/* Controls */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Year Filter */}
-              <div className="relative">
-                <Calendar size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
-                >
-                  <option value="All">All Years</option>
-                  {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+            {/* Row 1: Title + Export */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+                  <div className="p-2 bg-blue-600 rounded-xl shadow-md shadow-blue-200">
+                    <Wrench size={20} className="text-white" />
+                  </div>
+                  ALL CUSTOMERS
+                </h1>
+                <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mt-0.5">
+                  {filtered.length} of {services.length} records
+                  {selectedYear !== "All" && ` · ${selectedYear}`}
+                  {selectedFY !== "All" && ` · FY ${selectedFY}`}
+                  {selectedStatus !== "All" && ` · ${selectedStatus}`}
+                  {selectedStage !== "All" && ` · ${selectedStage}`}
+                </p>
               </div>
 
+              <button
+                onClick={() =>
+                  generateReportPDF(
+                    filtered,
+                    "Filtered Service Report",
+                    `Service_Report_${new Date().toLocaleDateString("en-IN").replace(/\//g, "-")}.pdf`
+                  )
+                }
+                className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-slate-200 transition-all self-start sm:self-auto"
+              >
+                <Download size={16} />
+                Export ({filtered.length})
+              </button>
+            </div>
+
+            {/* Row 2: Search + Filter Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* Global Search */}
-              <div className="relative">
-                <Search size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+              <div className="relative flex-1 min-w-[180px]">
+                <Search size={15} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search everything…"
+                  placeholder="Search name, SRF, phone, make…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl w-full sm:w-64 text-sm outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
+                  className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl w-full text-sm outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
                 />
                 {search && (
                   <button
                     onClick={() => setSearch("")}
                     className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    ×
+                    <X size={14} />
                   </button>
                 )}
               </div>
 
-              {/* Export Buttons */}
-              <button
-                onClick={() =>
-                  generateReportPDF(
-                    filtered,
-                    selectedYear === "All"
-                      ? "Full Service Report"
-                      : `Service Report — ${selectedYear}`,
-                    selectedYear === "All"
-                      ? "Full_Service_Report.pdf"
-                      : `Service_Report_${selectedYear}.pdf`
-                  )
-                }
-                className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-slate-200 transition-all"
-              >
-                <Download size={16} />
-                {selectedYear === "All" ? "Export All" : `Export ${selectedYear}`}
-              </button>
+              {/* ── STATUS FILTER BUTTON ── */}
+              <FilterDropdown
+                id="status"
+                label="Status"
+                icon={BadgeCheck}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                options={STATUS_GROUPS.map(g => ({ value: g.label, label: g.label, color: g.color }))}
+              />
+
+              {/* ── STAGE FILTER BUTTON ── */}
+              <FilterDropdown
+                id="stage"
+                label="Stage"
+                icon={Layers}
+                value={selectedStage}
+                onChange={setSelectedStage}
+                options={stageOptions}
+              />
+
+              {/* ── FINANCIAL YEAR FILTER BUTTON ── */}
+              <FilterDropdown
+                id="fy"
+                label="Fin. Year"
+                icon={Tag}
+                value={selectedFY}
+                onChange={setSelectedFY}
+                options={financialYears}
+              />
+
+              {/* ── CALENDAR YEAR FILTER BUTTON ── */}
+              <FilterDropdown
+                id="year"
+                label="Year"
+                icon={Calendar}
+                value={selectedYear}
+                onChange={setSelectedYear}
+                options={years}
+              />
+
+              {/* Clear All */}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold text-red-500 border border-red-200 bg-red-50 hover:bg-red-100 transition-all"
+                >
+                  <X size={14} /> Clear All
+                </button>
+              )}
             </div>
+
+            {/* Row 3: Active filter pills */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {search && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full border border-slate-200">
+                    <Search size={10} /> "{search}"
+                    <button onClick={() => setSearch("")} className="text-slate-400 hover:text-slate-700"><X size={10} /></button>
+                  </span>
+                )}
+                {selectedStatus !== "All" && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-200">
+                    <BadgeCheck size={10} /> Status: {selectedStatus}
+                    <button onClick={() => setSelectedStatus("All")} className="text-blue-400 hover:text-blue-700"><X size={10} /></button>
+                  </span>
+                )}
+                {selectedStage !== "All" && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full border border-purple-200">
+                    <Layers size={10} /> Stage: {selectedStage}
+                    <button onClick={() => setSelectedStage("All")} className="text-purple-400 hover:text-purple-700"><X size={10} /></button>
+                  </span>
+                )}
+                {selectedFY !== "All" && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200">
+                    <Tag size={10} /> FY: {selectedFY}
+                    <button onClick={() => setSelectedFY("All")} className="text-amber-400 hover:text-amber-700"><X size={10} /></button>
+                  </span>
+                )}
+                {selectedYear !== "All" && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200">
+                    <Calendar size={10} /> Year: {selectedYear}
+                    <button onClick={() => setSelectedYear("All")} className="text-emerald-400 hover:text-emerald-700"><X size={10} /></button>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -713,26 +916,26 @@ export default function AllCustomers() {
                             {s.updatedDate
                               ? new Date(s.updatedDate).toLocaleDateString("en-IN")
                               : s.createdAt
-                              ? new Date(s.createdAt).toLocaleDateString("en-IN")
-                              : "—"}
+                                ? new Date(s.createdAt).toLocaleDateString("en-IN")
+                                : "—"}
                           </p>
                         </td>
 
                         {/* Motor Details — 2-col grid matching AdminServices */}
                         <td className="px-4 py-3">
                           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                            <MotorField label="Make"  value={md.make}  />
-                            <MotorField label="HP"    value={md.hp}    />
-                            <MotorField label="RPM"   value={md.rpm}   />
-                            <MotorField label="KW"    value={md.kw}    />
+                            <MotorField label="Make" value={md.make} />
+                            <MotorField label="HP" value={md.hp} />
+                            <MotorField label="RPM" value={md.rpm} />
+                            <MotorField label="KW" value={md.kw} />
                             <MotorField label="Volts" value={md.volts} />
-                            <MotorField label="Amps"  value={md.amps}  />
+                            <MotorField label="Amps" value={md.amps} />
                             <MotorField label="Phase" value={md.phase} />
-                            <MotorField label="Type"  value={md.type}  />
-                            <MotorField label="Ins"   value={md.ins}   />
+                            <MotorField label="Type" value={md.type} />
+                            <MotorField label="Ins" value={md.ins} />
                             <MotorField label="Frame" value={md.frame} />
-                            <MotorField label="S/N"   value={md.serialNumber}   />
-                            <MotorField label="G.P."  value={md.gatePassNumber} />
+                            <MotorField label="S/N" value={md.serialNumber} />
+                            <MotorField label="G.P." value={md.gatePassNumber} />
                             <MotorField label="G.P. Date" value={md.gatePassDate ? new Date(md.gatePassDate).toLocaleDateString("en-IN") : null} />
                           </div>
                         </td>

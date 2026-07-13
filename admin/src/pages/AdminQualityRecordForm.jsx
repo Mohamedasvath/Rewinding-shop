@@ -207,28 +207,30 @@ export default function AdminQualityRecordForm() {
     setTechSuggestions(historyTechs);
 
     // 2. Find specific technicians for Section 9 based on workHistory
-    const findLastTechFor = (stage) => {
-      const entry = [...history].reverse().find(h => h.stage === stage);
-      return entry ? entry.technician : "";
+    const findLastTechFor = (...stages) => {
+      for (const stage of stages) {
+        const entry = [...history].reverse().find(h => h.stage === stage);
+        if (entry && entry.technician) return entry.technician;
+      }
+      return "";
     };
 
     setFormData(prev => ({
       ...prev,
-      srfNumber:    svc.srfNumber   || prev.srfNumber,
+      srfNumber:    svc.srfNumber    || prev.srfNumber,
       companyName:  svc.customerName || prev.companyName,
       address:      svc.address      || prev.address,
-      technician:   svc.technician   || prev.technician,
       date:         svc.updatedDate
                       ? new Date(svc.updatedDate).toISOString().split("T")[0]
                       : prev.date,
-      
-      // Auto-fill Section 9 Process Details
+
+      // Auto-fill Section 9 Process Details from workHistory stages
       processDetails: {
         ...prev.processDetails,
-        dismantled: findLastTechFor("Dismantling") || findLastTechFor("Inspection") || svc.technician || "",
-        rewound:    findLastTechFor("Rewinding")   || "",
-        assembled:  findLastTechFor("Assembling")  || "",
+        dismantled:  findLastTechFor("Dismantling", "Inspection") || svc.technician || "",
         wireRemoved: findLastTechFor("Dismantling") || "",
+        rewound:     findLastTechFor("Rewinding") || "",
+        assembled:   findLastTechFor("Assembling", "Testing") || "",
       },
 
       inspectionTesting: {
@@ -276,7 +278,20 @@ export default function AdminQualityRecordForm() {
   /* ─── SUBMIT ─── */
   const handleSubmit = async (e) => {
     e.preventDefault();
-     console.log("SENDING DATA:", formData);
+
+    // Duplicate SRF check for new records
+    if (!editingId) {
+      const duplicate = records.find(
+        r => r.srfNumber && r.srfNumber.trim().toLowerCase() === (formData.srfNumber || "").trim().toLowerCase()
+      );
+      if (duplicate) {
+        toast.error(
+          `Quality Record already exists for SRF Number "${formData.srfNumber}". Duplicate entries are not allowed.`,
+          { autoClose: 5000 }
+        );
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -296,7 +311,6 @@ export default function AdminQualityRecordForm() {
       toast.error(err.response?.data?.message || "Operation failed");
     } finally {
       setLoading(false);
-      
     }
   };
 
@@ -566,20 +580,6 @@ export default function AdminQualityRecordForm() {
                   <FieldRow label="Date">
                     <FInput type="date" value={formData.date ? formData.date.split("T")[0] : ""} onChange={e => top("date", e.target.value)} />
                   </FieldRow>
-                  <FieldRow label="Technician">
-                    <input
-                      list="tech-list"
-                      value={formData.technician}
-                      onChange={e => top("technician", e.target.value)}
-                      placeholder="Type or select technician..."
-                      className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-300"
-                    />
-                    <datalist id="tech-list">
-                      {techSuggestions.map(t => (
-                        <option key={t} value={t} />
-                      ))}
-                    </datalist>
-                  </FieldRow>
                 </div>
                 <div>
                   <FieldRow label="Party GP No.">
@@ -789,28 +789,30 @@ export default function AdminQualityRecordForm() {
               </div>
 
               {/* ══ SECTION 9: PROCESS ROW ══ */}
-              <SectionTitle>Section 9 — Process Details</SectionTitle>
+              <SectionTitle>Section 9 — Process Details (Auto-filled from Workflow)</SectionTitle>
               <div className="grid grid-cols-2 md:grid-cols-4 border-b border-blue-200">
                 {[
-                  ["Dismantled",    "dismantled"],
-                  ["Wire Removed",  "wireRemoved"],
-                  ["Rewound",       "rewound"],
-                  ["Assembled",     "assembled"],
-                ].map(([label, field], i) => (
-                  <div key={field} className={`border-r border-blue-100 flex items-center min-h-[28px] ${i === 3 ? "border-r-0" : ""}`}>
-                    <span className="text-[9px] font-black text-slate-500 uppercase w-[80px] shrink-0 px-2 py-1 bg-slate-50 border-r border-blue-100">{label}</span>
-                    <div className="flex-1 px-2 py-0.5">
+                  ["Dismantled",   "dismantled",  "Dismantling stage"],
+                  ["Wire Removed", "wireRemoved", "Dismantling stage"],
+                  ["Rewound",      "rewound",     "Rewinding stage"],
+                  ["Assembled",    "assembled",   "Assembling/Testing stage"],
+                ].map(([label, field, hint], i) => (
+                  <div key={field} className={`border-r border-blue-100 flex flex-col min-h-[42px] ${i === 3 ? "border-r-0" : ""}`}>
+                    <span className="text-[9px] font-black text-slate-500 uppercase px-2 py-1 bg-slate-50 border-b border-blue-100 leading-tight">{label}</span>
+                    <div className="flex-1 px-2 py-1">
                       <input
                         list={`tech-list-${field}`}
                         value={formData.processDetails[field]}
                         onChange={e => nested("processDetails", field, e.target.value)}
-                        className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-400"
+                        placeholder={formData.srfNumber ? "Auto-filled" : "Select SRF first"}
+                        className="w-full text-[11px] bg-transparent outline-none border-b border-transparent focus:border-blue-500 py-0.5 text-slate-800 placeholder-slate-300"
                       />
                       <datalist id={`tech-list-${field}`}>
                         {techSuggestions.map(t => (
                           <option key={t} value={t} />
                         ))}
                       </datalist>
+                      <p className="text-[8px] text-slate-400 mt-0.5">{hint}</p>
                     </div>
                   </div>
                 ))}

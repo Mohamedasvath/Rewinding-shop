@@ -27,12 +27,12 @@ const fd = (d) => {
 /* ── Section title bar ── */
 const SecTitle = ({ icon: Icon, label, color = "blue" }) => {
   const colors = {
-    blue:   "bg-blue-700 text-white",
-    slate:  "bg-slate-700 text-white",
-    green:  "bg-emerald-700 text-white",
-    amber:  "bg-amber-600 text-white",
+    blue: "bg-blue-700 text-white",
+    slate: "bg-slate-700 text-white",
+    green: "bg-emerald-700 text-white",
+    amber: "bg-amber-600 text-white",
     purple: "bg-purple-700 text-white",
-    red:    "bg-red-700 text-white",
+    red: "bg-red-700 text-white",
   };
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest ${colors[color] || colors.blue}`}>
@@ -45,10 +45,10 @@ const SecTitle = ({ icon: Icon, label, color = "blue" }) => {
 /* ── Field row in a 2-col table ── */
 const FR = ({ label, value }) => (
   <div className="flex border-b border-slate-100 min-h-[24px]">
-    <span className="text-[10px] font-bold text-slate-500 uppercase w-[110px] shrink-0 px-2 py-1 bg-slate-50 border-r border-slate-100">
+    <span className="text-[10px] font-bold text-slate-500 uppercase w-[90px] sm:w-[110px] shrink-0 px-2 py-1 bg-slate-50 border-r border-slate-100 leading-tight">
       {label}
     </span>
-    <span className="text-[11px] text-slate-800 font-semibold px-2 py-1 flex-1">{fv(value)}</span>
+    <span className="text-[11px] text-slate-800 font-semibold px-2 py-1 flex-1 break-words min-w-0">{fv(value)}</span>
   </div>
 );
 
@@ -56,18 +56,18 @@ const FR = ({ label, value }) => (
    FULL REPORT (expand view inside page)
 ══════════════════════════════════════════════ */
 const FullReport = ({ rec }) => {
-  const it  = rec.inspectionTesting  || {};
-  const cd  = rec.coreDetails        || {};
-  const cnd = rec.conditionDetails   || {};
-  const pd  = rec.paperDetails       || {};
-  const wd  = rec.windingDetails     || {};
-  const prd = rec.processDetails     || {};
-  const at  = rec.assemblingTesting  || {};
-  const ef  = rec.efficiencyDetails  || {};
-  const lt  = rec.loadTesting        || [];
+  const it = rec.inspectionTesting || {};
+  const cd = rec.coreDetails || {};
+  const cnd = rec.conditionDetails || {};
+  const pd = rec.paperDetails || {};
+  const wd = rec.windingDetails || {};
+  const prd = rec.processDetails || {};
+  const at = rec.assemblingTesting || {};
+  const ef = rec.efficiencyDetails || {};
+  const lt = rec.loadTesting || [];
 
   return (
-    <div className="text-[11px] border border-slate-200 bg-white print-section" id={`report-${rec._id}`}>
+    <div className="text-[11px] border border-slate-200 bg-white print-section min-w-[340px]" id={`report-${rec._id}`}>
 
       {/* ── REPORT HEADER ── */}
       <div className="bg-blue-800 text-white text-center py-3 px-4">
@@ -77,127 +77,148 @@ const FullReport = ({ rec }) => {
 
       {/* ── SECTION 1: HEADER INFO ── */}
       <SecTitle icon={FileText} label="Section 1 — Header Information" color="slate" />
-      <div className="grid grid-cols-1 md:grid-cols-2 border-b border-slate-200">
-        <div className="border-b md:border-b-0 md:border-r border-slate-200">
-          <FR label="Company"       value={rec.companyName} />
-          <FR label="Address"       value={rec.address} />
-          <FR label="SRF Number"    value={rec.srfNumber} />
-          <FR label="Date"          value={fd(rec.date)} />
-          <FR label="Technician"    value={rec.technician} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-slate-200">
+        <div className="border-b sm:border-b-0 sm:border-r border-slate-200">
+          <FR label="Company" value={rec.companyName} />
+          <FR label="Address" value={rec.address} />
+          <FR label="SRF Number" value={rec.srfNumber} />
+          <FR label="Date" value={fd(rec.date)} />
+          <FR label="Technician" value={rec.technician} />
         </div>
         <div>
-          <FR label="Party GP No."  value={rec.partyGPNumber} />
+          <FR label="Party GP No." value={rec.partyGPNumber} />
           <FR label="Party GP Date" value={fd(rec.partyGPDate)} />
-          <FR label="D-Note No."    value={rec.dNoteNumber} />
-          <FR label="D-Note Date"   value={fd(rec.dNoteDate)} />
-          <FR label="Bill No."      value={rec.billNo} />
-          <FR label="Bill Date"     value={fd(rec.billDate)} />
+          <FR label="D-Note No." value={rec.dNoteNumber} />
+          <FR label="D-Note Date" value={fd(rec.dNoteDate)} />
+          <FR label="Bill No." value={rec.billNo} />
+          <FR label="Bill Date" value={fd(rec.billDate)} />
         </div>
       </div>
 
       {/* ── SECTION 2: INSPECTION & TESTING ── */}
       <SecTitle icon={Settings2} label="Section 2 — Inspection & Testing" color="blue" />
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200">
-        {[
-          ["Make",        it.make],
-          ["HP",          it.hp],
-          ["KW",          it.kw],
-          ["Amps",        it.amps],
-          ["Volts",       it.volts],
-          ["Phase",       it.phase],
-          ["RPM",         it.rpm],
-          ["Insulation",  it.insulation],
-          ["Connection",  it.connection],
-          ["Frame",       it.frame],
-          ["Type",        it.type],
-          ["Sl. No.",     it.slNo],
-          ["Ex. Volts",   it.exV],
-          ["Ex. Amps",    it.exA],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      {/* Section 2 — scrolls horizontally if content overflows on narrow phones */}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 min-w-[320px]">
+          {[
+            ["Make", it.make],
+            ["HP", it.hp],
+            ["KW", it.kw],
+            ["Amps", it.amps],
+            ["Volts", it.volts],
+            ["Phase", it.phase],
+            ["RPM", it.rpm],
+            ["Insulation", it.insulation],
+            ["Connection", it.connection],
+            ["Frame", it.frame],
+            ["Type", it.type],
+            ["Sl. No.", it.slNo],
+            ["Ex. Volts", it.exV],
+            ["Ex. Amps", it.exA],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[60px] sm:w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 3: CORE DETAILS ── */}
       <SecTitle icon={Package} label="Section 3 — Core Details" color="slate" />
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200">
-        {[
-          ["Core Length",     cd.coreLength],
-          ["Core Dia",        cd.coreDia],
-          ["Rotor Length",    cd.rotorLength],
-          ["Rotor Perimeter", cd.rotorPerimeter],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[90px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 sm:grid-cols-4 min-w-[300px]">
+          {[
+            ["Core Length", cd.coreLength],
+            ["Core Dia", cd.coreDia],
+            ["Rotor Length", cd.rotorLength],
+            ["Rotor Perimeter", cd.rotorPerimeter],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[72px] sm:w-[90px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 4: CONDITION DETAILS ── */}
       <SecTitle icon={AlertTriangle} label="Section 4 — Condition Details" color="amber" />
-      <div className="grid grid-cols-2 md:grid-cols-3 border-b border-slate-200">
-        {[
-          ["Brg - Drive End",     cnd.driveEndBearing],
-          ["Brg - Non-Drive",     cnd.nonDriveEndBearing],
-          ["Shield - Drive End",  cnd.driveEndCondition],
-          ["Shield - Non-Drive",  cnd.nonDriveEndCondition],
-          ["Shaft - Drive End",   cnd.shaftDriveEnd],
-          ["Shaft - Non-Drive",   cnd.shaftNonDriveEnd],
-          ["Growler - Rotor",     cnd.rotor],
-          ["Growler - Stator",    cnd.statorCoil],
-          ["Rotor Position",      cnd.rotorPosition],
-          ["Air Gap",             cnd.airGap],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[100px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 min-w-[280px]">
+          {[
+            ["Brg - Drive End", cnd.driveEndBearing],
+            ["Brg - Non-Drive", cnd.nonDriveEndBearing],
+            ["Shield - Drive End", cnd.driveEndCondition],
+            ["Shield - Non-Drive", cnd.nonDriveEndCondition],
+            ["Shaft - Drive End", cnd.shaftDriveEnd],
+            ["Shaft - Non-Drive", cnd.shaftNonDriveEnd],
+            ["Growler - Rotor", cnd.rotor],
+            ["Growler - Stator", cnd.statorCoil],
+            ["Rotor Position", cnd.rotorPosition],
+            ["Air Gap", cnd.airGap],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[90px] sm:w-[100px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 5: PAPER DETAILS ── */}
       <SecTitle icon={ClipboardList} label="Section 5 — Paper Details" color="slate" />
-      <div className="grid grid-cols-2 md:grid-cols-5 border-b border-slate-200">
-        {[
-          ["Slot L",   pd.slotL],
-          ["Slot B",   pd.slotB],
-          ["Centre",   pd.centre],
-          ["Top",      pd.top],
-          ["Separate", pd.separate],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[56px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 min-w-[300px]">
+          {[
+            ["Slot L", pd.slotL],
+            ["Slot B", pd.slotB],
+            ["Centre", pd.centre],
+            ["Top", pd.top],
+            ["Separate", pd.separate],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[52px] sm:w-[56px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 6: WINDING DETAILS ── */}
       <SecTitle icon={Wrench} label="Section 6 — Winding Details" color="blue" />
-      <div className="grid grid-cols-1 border-b border-slate-200">
-        {[
-          ["SWG",           `Existing: ${fv(wd.swg?.existing)}  |  Alteration: ${fv(wd.swg?.alteration)}`],
-          ["Slot",          `Existing: ${fv(wd.slot?.existing)}  |  Alteration: ${fv(wd.slot?.alteration)}`],
-          ["Winding",       `Existing: ${fv(wd.winding?.existing)}  |  Alteration: ${fv(wd.winding?.alteration)}`],
-          ["Pitch",         `Existing: ${fv(wd.pitch?.existing)}  |  Alteration: ${fv(wd.pitch?.alteration)}`],
-          ["Turns/Slot",    `Existing: ${fv(wd.turns?.existing)}  |  Alteration: ${fv(wd.turns?.alteration)}`],
-          ["Total Coils",   `Existing: ${fv(wd.totalCoils?.existing)}  |  Alteration: ${fv(wd.totalCoils?.alteration)}`],
-          ["Total Meter",   `Existing: ${fv(wd.totalMeter?.existing)}  |  Alteration: ${fv(wd.totalMeter?.alteration)}`],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      <div className="border-b border-slate-200 overflow-x-auto">
+        <table className="w-full text-[11px] border-collapse min-w-[280px]">
+          <thead>
+            <tr className="bg-slate-50">
+              <th className="text-[9px] font-black text-slate-500 uppercase px-2 py-1.5 border-b border-r border-slate-100 text-left w-[70px] sm:w-[80px]">Detail</th>
+              <th className="text-[9px] font-black text-slate-500 uppercase px-2 py-1.5 border-b border-r border-slate-100 text-left">Existing</th>
+              <th className="text-[9px] font-black text-slate-500 uppercase px-2 py-1.5 border-b border-slate-100 text-left">Alteration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["SWG", wd.swg?.existing, wd.swg?.alteration],
+              ["Slot", wd.slot?.existing, wd.slot?.alteration],
+              ["Winding", wd.winding?.existing, wd.winding?.alteration],
+              ["Pitch", wd.pitch?.existing, wd.pitch?.alteration],
+              ["Turns/Slot", wd.turns?.existing, wd.turns?.alteration],
+              ["Total Coils", wd.totalCoils?.existing, wd.totalCoils?.alteration],
+              ["Total Meter", wd.totalMeter?.existing, wd.totalMeter?.alteration],
+            ].map(([label, existing, alteration]) => (
+              <tr key={label} className="border-b border-slate-100">
+                <td className="text-[9px] font-bold text-slate-500 uppercase px-2 py-1.5 bg-slate-50 border-r border-slate-100 leading-tight">{label}</td>
+                <td className="text-[11px] text-slate-800 font-semibold px-2 py-1.5 border-r border-slate-100">{fv(existing)}</td>
+                <td className="text-[11px] text-slate-800 font-semibold px-2 py-1.5">{fv(alteration)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       {wd.materialEstimate && (
         <div className="flex border-b border-slate-200">
-          <span className="text-[9px] font-bold text-slate-500 uppercase w-[110px] shrink-0 px-2 py-1.5 bg-slate-50 border-r border-slate-200">Material Est.</span>
-          <span className="text-[11px] text-slate-800 font-semibold px-2 py-1.5 flex-1 whitespace-pre-wrap">{wd.materialEstimate}</span>
+          <span className="text-[9px] font-bold text-slate-500 uppercase w-[90px] sm:w-[110px] shrink-0 px-2 py-1.5 bg-slate-50 border-r border-slate-200 leading-tight">Material Est.</span>
+          <span className="text-[11px] text-slate-800 font-semibold px-2 py-1.5 flex-1 whitespace-pre-wrap break-words min-w-0">{wd.materialEstimate}</span>
         </div>
       )}
 
@@ -215,41 +236,46 @@ const FullReport = ({ rec }) => {
 
       {/* ── SECTION 9: PROCESS DETAILS ── */}
       <SecTitle icon={CheckSquare} label="Section 9 — Process Details" color="green" />
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 border-b border-slate-200">
-        {[
-          ["Dismantled",   prd.dismantled],
-          ["Wire Removed", prd.wireRemoved],
-          ["Rewound",      prd.rewound],
-          ["Assembled",    prd.assembled],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-r border-slate-100 min-h-[28px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[80px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 md:grid-cols-4 min-w-[300px]">
+          {[
+            ["Dismantled", prd.dismantled],
+            ["Wire Removed", prd.wireRemoved],
+            ["Rewound", prd.rewound],
+            ["Assembled", prd.assembled],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[28px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[80px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 10: ASSEMBLING & TESTING ── */}
       <SecTitle icon={Zap} label="Section 10 — Assembling & Testing" color="blue" />
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-200">
-        {[
-          ["HV Test",      at.hvTest],
-          ["Running Time", at.runningTime],
-          ["Temperature",  at.temperature],
-          ["Drum Size",    at.drumSize],
-          ["RPM",          at.rpm],
-          ["NL Volt L1",   at.noLoadVoltageL1],
-          ["NL Volt L2",   at.noLoadVoltageL2],
-          ["NL Volt L3",   at.noLoadVoltageL3],
-          ["NL Amps L1",   at.noLoadAmpsL1],
-          ["NL Amps L2",   at.noLoadAmpsL2],
-          ["NL Amps L3",   at.noLoadAmpsL3],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      {/* Section 10 — horizontally scrollable on mobile */}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 min-w-[320px]">
+          {[
+            ["HV Test", at.hvTest],
+            ["Run Time", at.runningTime],
+            ["Temperature", at.temperature],
+            ["Drum Size", at.drumSize],
+            ["RPM", at.rpm],
+            ["NL Volt L1", at.noLoadVoltageL1],
+            ["NL Volt L2", at.noLoadVoltageL2],
+            ["NL Volt L3", at.noLoadVoltageL3],
+            ["NL Amps L1", at.noLoadAmpsL1],
+            ["NL Amps L2", at.noLoadAmpsL2],
+            ["NL Amps L3", at.noLoadAmpsL3],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[24px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[60px] sm:w-[72px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 11: LOAD TESTING TABLE ── */}
@@ -279,20 +305,23 @@ const FullReport = ({ rec }) => {
 
       {/* ── SECTION 12: EFFICIENCY ── */}
       <SecTitle icon={Zap} label="Section 12 — Efficiency Details" color="purple" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 border-b border-slate-200">
-        {[
-          ["KWH",          ef.kwh],
-          ["PF",           ef.pf],
-          ["Hz",           ef.hz],
-          ["Efficiency",   ef.efficiency],
-          ["% Efficiency", ef.percentageEfficiency],
-          ["Load %",       ef.loadPercentage],
-        ].map(([label, val]) => (
-          <div key={label} className="flex items-center border-r border-slate-100 min-h-[28px]">
-            <span className="text-[9px] font-bold text-slate-500 uppercase w-[68px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
-            <span className="text-[11px] text-slate-800 font-semibold px-2 py-1">{fv(val)}</span>
-          </div>
-        ))}
+      {/* Section 12 — efficiency, horizontally scrollable on mobile */}
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 min-w-[300px]">
+          {[
+            ["KWH", ef.kwh],
+            ["PF", ef.pf],
+            ["Hz", ef.hz],
+            ["Efficiency", ef.efficiency],
+            ["% Eff.", ef.percentageEfficiency],
+            ["Load %", ef.loadPercentage],
+          ].map(([label, val]) => (
+            <div key={label} className="flex items-center border-b border-r border-slate-100 min-h-[28px]">
+              <span className="text-[9px] font-bold text-slate-500 uppercase w-[56px] sm:w-[68px] shrink-0 px-1.5 py-1 bg-slate-50 border-r border-slate-100 leading-tight">{label}</span>
+              <span className="text-[11px] text-slate-800 font-semibold px-1.5 py-1 break-words min-w-0">{fv(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── SECTION 13: CONNECTION DETAILS ── */}
@@ -371,7 +400,7 @@ const buildPDFPage = (doc, record) => {
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
     head: [["Make", "HP", "KW", "Amps", "Volts", "Phase", "RPM", "Ins", "Frame"]],
-    body: [[it.make||"", it.hp||"", it.kw||"", it.amps||"", it.volts||"", it.phase||"", it.rpm||"", it.insulation||"", it.frame||""]],
+    body: [[it.make || "", it.hp || "", it.kw || "", it.amps || "", it.volts || "", it.phase || "", it.rpm || "", it.insulation || "", it.frame || ""]],
     margin: { left: 10, right: 10 },
   });
   y = doc.lastAutoTable.finalY + 4;
@@ -387,20 +416,20 @@ const buildPDFPage = (doc, record) => {
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
     head: [["Details", "Existing", "Alteration"]],
     body: [
-      ["SWG", wd.swg?.existing||"", wd.swg?.alteration||""],
-      ["Slot", wd.slot?.existing||"", wd.slot?.alteration||""],
-      ["Winding", wd.winding?.existing||"", wd.winding?.alteration||""],
-      ["Pitch", wd.pitch?.existing||"", wd.pitch?.alteration||""],
-      ["Turns", wd.turns?.existing||"", wd.turns?.alteration||""],
-      ["Total Coils", wd.totalCoils?.existing||"", wd.totalCoils?.alteration||""],
-      ["Total Meter", wd.totalMeter?.existing||"", wd.totalMeter?.alteration||""],
+      ["SWG", wd.swg?.existing || "", wd.swg?.alteration || ""],
+      ["Slot", wd.slot?.existing || "", wd.slot?.alteration || ""],
+      ["Winding", wd.winding?.existing || "", wd.winding?.alteration || ""],
+      ["Pitch", wd.pitch?.existing || "", wd.pitch?.alteration || ""],
+      ["Turns", wd.turns?.existing || "", wd.turns?.alteration || ""],
+      ["Total Coils", wd.totalCoils?.existing || "", wd.totalCoils?.alteration || ""],
+      ["Total Meter", wd.totalMeter?.existing || "", wd.totalMeter?.alteration || ""],
     ],
     margin: { left: 10, right: 10 },
   });
   y = doc.lastAutoTable.finalY + 4;
   doc.setFont("helvetica", "bold");
   doc.text("MATERIALS ESTIMATE", 12, y); y += 3;
-  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica", "normal");
   doc.text(wd.materialEstimate || "", 12, y + 6, { maxWidth: 186 });
   y += 20;
 
@@ -413,7 +442,7 @@ const buildPDFPage = (doc, record) => {
     styles: { fontSize: 8, cellPadding: 2, halign: "center" },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
     head: [["WT", "AMPS", "RPM", "KW"]],
-    body: (record.loadTesting || []).map(r => [r.wt||"", r.amps||"", r.rpm||"", r.kw||""]),
+    body: (record.loadTesting || []).map(r => [r.wt || "", r.amps || "", r.rpm || "", r.kw || ""]),
     margin: { left: 10, right: 10 },
   });
   y = doc.lastAutoTable.finalY + 4;
@@ -421,12 +450,12 @@ const buildPDFPage = (doc, record) => {
   // Mechanical Work + Cause
   doc.setFont("helvetica", "bold");
   doc.text("MECHANICAL WORK DONE", 12, y); y += 3;
-  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica", "normal");
   doc.text(record.mechanicalWorkDone || "", 12, y + 6, { maxWidth: 186 });
   y += 20;
   doc.setFont("helvetica", "bold");
   doc.text("CAUSE OF FAILURE", 12, y); y += 3;
-  doc.rect(10, y, 190, 16); doc.setFont("helvetica","normal");
+  doc.rect(10, y, 190, 16); doc.setFont("helvetica", "normal");
   doc.text(record.causeOfFailure || "", 12, y + 6, { maxWidth: 186 });
   y += 20;
 
@@ -440,7 +469,7 @@ const buildPDFPage = (doc, record) => {
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
     head: [["HV Test", "Run Time", "Temp", "V-L1", "V-L2", "V-L3", "A-L1", "A-L2", "A-L3", "RPM", "Drum"]],
-    body: [[at.hvTest||"", at.runningTime||"", at.temperature||"", at.noLoadVoltageL1||"", at.noLoadVoltageL2||"", at.noLoadVoltageL3||"", at.noLoadAmpsL1||"", at.noLoadAmpsL2||"", at.noLoadAmpsL3||"", at.rpm||"", at.drumSize||""]],
+    body: [[at.hvTest || "", at.runningTime || "", at.temperature || "", at.noLoadVoltageL1 || "", at.noLoadVoltageL2 || "", at.noLoadVoltageL3 || "", at.noLoadAmpsL1 || "", at.noLoadAmpsL2 || "", at.noLoadAmpsL3 || "", at.rpm || "", at.drumSize || ""]],
     margin: { left: 10, right: 10 },
   });
   y = doc.lastAutoTable.finalY + 4;
@@ -455,7 +484,7 @@ const buildPDFPage = (doc, record) => {
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [30, 64, 175], textColor: 255, fontSize: 8 },
     head: [["KWH", "PF", "Hz", "Efficiency", "% Efficiency", "Load %"]],
-    body: [[ef.kwh||"", ef.pf||"", ef.hz||"", ef.efficiency||"", ef.percentageEfficiency||"", ef.loadPercentage||""]],
+    body: [[ef.kwh || "", ef.pf || "", ef.hz || "", ef.efficiency || "", ef.percentageEfficiency || "", ef.loadPercentage || ""]],
     margin: { left: 10, right: 10 },
   });
 
@@ -476,29 +505,42 @@ const buildPDFPage = (doc, record) => {
 ══════════════════════════════════════════════ */
 export default function QualityRecordView() {
   const navigate = useNavigate();
-  const [records, setRecords]           = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [searchTerm, setSearchTerm]     = useState("");
-  const [searchCoreDia, setSearchCoreDia]       = useState("");
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchCoreDia, setSearchCoreDia] = useState("");
   const [searchCoreLength, setSearchCoreLength] = useState("");
-  const [searchMake, setSearchMake]             = useState("");
-  const [searchHP, setSearchHP]                 = useState("");
+  const [searchMake, setSearchMake] = useState("");
+  const [searchHP, setSearchHP] = useState("");
   const [selectedYear, setSelectedYear] = useState("All");
-  const [expandedId, setExpandedId]     = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   /* ══════════════════════════════════════════════
      PASSWORD LOCK
+     — Always requires authentication on every visit.
+     — Uses fixed full-viewport overlay so it cannot
+       be scrolled past or bypassed.
   ══════════════════════════════════════════════ */
   const ADMIN_PASSWORD = "admin123";
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [pwInput, setPwInput]         = useState("");
-  const [pwError, setPwError]         = useState("");
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+
+  /* Block background scroll while locked */
+  useEffect(() => {
+    if (!isUnlocked) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isUnlocked]);
 
   const handleUnlock = () => {
-    if (pwInput === ADMIN_PASSWORD) {
+    if (pwInput.trim() === ADMIN_PASSWORD) {
       setIsUnlocked(true);
       setPwError("");
-    try { localStorage.setItem("qc_unlock", "true"); } catch {}
     } else {
       setPwError("Incorrect password. Please try again.");
       setPwInput("");
@@ -558,14 +600,14 @@ export default function QualityRecordView() {
         const d = new Date(r.date || r.createdAt);
         if (isNaN(d) || d.getFullYear().toString() !== selectedYear) return false;
       }
-      
-      const it  = r.inspectionTesting  || {};
-      const wd  = r.windingDetails     || {};
-      const at  = r.assemblingTesting  || {};
-      const ef  = r.efficiencyDetails  || {};
-      const cd  = r.coreDetails        || {};
-      const cnd = r.conditionDetails   || {};
-      const prd = r.processDetails     || {};
+
+      const it = r.inspectionTesting || {};
+      const wd = r.windingDetails || {};
+      const at = r.assemblingTesting || {};
+      const ef = r.efficiencyDetails || {};
+      const cd = r.coreDetails || {};
+      const cnd = r.conditionDetails || {};
+      const prd = r.processDetails || {};
 
       // 2. Specific Filters (AND logic)
       if (tCD && !safe(cd.coreDia).includes(tCD)) return false;
@@ -577,29 +619,29 @@ export default function QualityRecordView() {
       if (!t) return true;
 
       return (
-        safe(r.companyName).includes(t)       ||
-        safe(r.srfNumber).includes(t)         ||
-        safe(r.address).includes(t)           ||
-        safe(r.partyGPNumber).includes(t)     ||
-        safe(r.dNoteNumber).includes(t)       ||
-        safe(r.billNo).includes(t)            ||
-        safe(it.make).includes(t)             ||
-        safe(it.type).includes(t)             ||
-        safe(it.slNo).includes(t)             ||
-        safe(it.hp).includes(t)               ||
-        safe(r.technician).includes(t)        ||
-        safe(r.mechanicalWorkDone).includes(t)||
-        safe(r.causeOfFailure).includes(t)    ||
+        safe(r.companyName).includes(t) ||
+        safe(r.srfNumber).includes(t) ||
+        safe(r.address).includes(t) ||
+        safe(r.partyGPNumber).includes(t) ||
+        safe(r.dNoteNumber).includes(t) ||
+        safe(r.billNo).includes(t) ||
+        safe(it.make).includes(t) ||
+        safe(it.type).includes(t) ||
+        safe(it.slNo).includes(t) ||
+        safe(it.hp).includes(t) ||
+        safe(r.technician).includes(t) ||
+        safe(r.mechanicalWorkDone).includes(t) ||
+        safe(r.causeOfFailure).includes(t) ||
         // Check nested winding details
-        safe(wd.swg?.existing).includes(t)    ||
-        safe(wd.swg?.alteration).includes(t)  ||
-        safe(wd.slot?.existing).includes(t)   ||
+        safe(wd.swg?.existing).includes(t) ||
+        safe(wd.swg?.alteration).includes(t) ||
+        safe(wd.slot?.existing).includes(t) ||
         safe(wd.slot?.alteration).includes(t) ||
-        safe(wd.windingType).includes(t)      ||
+        safe(wd.windingType).includes(t) ||
         safe(wd.materialEstimate).includes(t) ||
         // Process details
-        safe(prd.dismantled).includes(t)      ||
-        safe(prd.rewound).includes(t)         ||
+        safe(prd.dismantled).includes(t) ||
+        safe(prd.rewound).includes(t) ||
         safe(prd.assembled).includes(t)
       );
     });
@@ -635,18 +677,18 @@ export default function QualityRecordView() {
 
     const rows = (lt) =>
       (lt?.length ? lt : Array(5).fill({}))
-        .map((r, i) => `<tr><td>${i+1}</td><td>${fv(r.wt)}</td><td>${fv(r.amps)}</td><td>${fv(r.rpm)}</td><td>${fv(r.kw)}</td></tr>`)
+        .map((r, i) => `<tr><td>${i + 1}</td><td>${fv(r.wt)}</td><td>${fv(r.amps)}</td><td>${fv(r.rpm)}</td><td>${fv(r.kw)}</td></tr>`)
         .join("");
 
     const pageHTML = (r) => {
-      const it  = r.inspectionTesting  || {};
-      const cd  = r.coreDetails        || {};
-      const cnd = r.conditionDetails   || {};
-      const pd  = r.paperDetails       || {};
-      const wd  = r.windingDetails     || {};
-      const prd = r.processDetails     || {};
-      const at  = r.assemblingTesting  || {};
-      const ef  = r.efficiencyDetails  || {};
+      const it = r.inspectionTesting || {};
+      const cd = r.coreDetails || {};
+      const cnd = r.conditionDetails || {};
+      const pd = r.paperDetails || {};
+      const wd = r.windingDetails || {};
+      const prd = r.processDetails || {};
+      const at = r.assemblingTesting || {};
+      const ef = r.efficiencyDetails || {};
       return `
       <div class="page">
         <div class="hd"><h1>SENTHIL REWINDING WORKSHOP</h1><p>QUALITY INSPECTION REPORT</p></div>
@@ -775,19 +817,21 @@ export default function QualityRecordView() {
      RENDER
   ══════════════════════════════════════════════ */
   return (
-   <div className="relative min-h-[calc(90vh-64px)] bg-slate-100 pb-10 font-sans flex flex-col">
+    <div className="relative min-h-screen bg-slate-100 pb-10 font-sans flex flex-col">
 
       {/* ══════════════════════════════════════════════
           PASSWORD LOCK OVERLAY
-          — covers ONLY this content area, not sidebar
+          — fixed full-viewport so it cannot be scrolled
+            past, bypassed, or dismissed without the
+            correct admin password.
       ══════════════════════════════════════════════ */}
       {!isUnlocked && (
-        <div className="absolute pt-5 inset-0 z-50 bg-slate-100/95 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm p-8 flex flex-col items-center gap-6">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm mx-auto p-6 sm:p-8 flex flex-col items-center gap-5">
 
             {/* ICON */}
-            <div className="p-3 bg-blue-600 rounded-xl shadow-md shadow-blue-200">
-              <ShieldCheck size={28} className="text-white" />
+            <div className="p-4 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
+              <ShieldCheck size={32} className="text-white" />
             </div>
 
             {/* TITLE + SUBTITLE */}
@@ -795,8 +839,8 @@ export default function QualityRecordView() {
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 Senthil Rewinding
               </h2>
-              <p className="text-slate-400 text-sm mt-1">
-                Enter password to access quality records
+              <p className="text-slate-500 text-sm mt-1 font-medium">
+                Enter admin password to access quality records
               </p>
             </div>
 
@@ -804,61 +848,104 @@ export default function QualityRecordView() {
             <div className="w-full flex flex-col gap-3">
               <input
                 type="password"
-                placeholder="Enter password"
+                placeholder="Admin password"
                 value={pwInput}
                 autoFocus
                 onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
                 className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all
                   ${pwError
-                    ? "border-red-300 bg-red-50 focus:ring-2 focus:ring-red-200"
+                    ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200"
                     : "border-slate-200 bg-slate-50 focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                   }`}
               />
 
               {/* ERROR MESSAGE */}
               {pwError && (
-                <p className="text-xs text-red-500 font-semibold text-center">
-                  {pwError}
-                </p>
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <AlertTriangle size={14} className="text-red-500 shrink-0" />
+                  <p className="text-xs text-red-600 font-semibold">{pwError}</p>
+                </div>
               )}
 
               {/* UNLOCK BUTTON */}
               <button
                 onClick={handleUnlock}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl transition-all shadow-md shadow-blue-100 text-sm"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-black rounded-xl transition-all shadow-md shadow-blue-200 text-sm tracking-wide"
               >
-                Unlock
+                Unlock Access
               </button>
             </div>
+
+            <p className="text-[10px] text-slate-400 font-medium text-center">
+              This page is restricted to authorized admins only.
+            </p>
           </div>
         </div>
       )}
 
       {/* ── TOP BAR ── */}
       <div className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40 px-3 md:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center gap-3 justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-700 rounded-lg shrink-0">
-              <ShieldCheck size={20} className="text-white" />
+        <div className="max-w-7xl mx-auto space-y-2">
+
+          {/* Row 1: Title + Action Buttons */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="p-1.5 sm:p-2 bg-blue-700 rounded-lg shrink-0">
+                <ShieldCheck size={18} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-sm md:text-base font-black text-slate-900 uppercase tracking-widest leading-none truncate">Quality Records</h1>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase mt-0.5">
+                  {filtered.length} of {records.length}
+                  {selectedYear !== "All" && ` · ${selectedYear}`}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm md:text-base font-black text-slate-900 uppercase tracking-widest">Quality Record View</h1>
-              <p className="text-[10px] text-slate-400 font-semibold uppercase">
-                {filtered.length} of {records.length} records
-                {selectedYear !== "All" && ` · ${selectedYear}`}
-              </p>
+
+            {/* Right side: action buttons + filter toggle */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <button
+                onClick={generateBulkPDF}
+                title="Export PDF"
+                className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-slate-800 hover:bg-black text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+              >
+                <Download size={14} />
+                <span className="hidden xs:inline sm:inline">PDF</span>
+              </button>
+
+              <button
+                onClick={() => handlePrint()}
+                title="Print All"
+                className="flex items-center gap-1 px-2 sm:px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+              >
+                <Printer size={14} />
+                <span className="hidden sm:inline">Print</span>
+              </button>
+
+              {/* Filter toggle — visible always on mobile */}
+              <button
+                onClick={() => setShowFilters(p => !p)}
+                title="Toggle Filters"
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-lg text-xs font-bold transition-all border ${showFilters
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+                  }`}
+              >
+                <Settings2 size={14} />
+                <span className="hidden sm:inline">Filters</span>
+              </button>
             </div>
           </div>
 
-          {/* Fix 3 — Controls: flex-wrap, full-width on mobile */}
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Row 2: Search & Filters — always visible on md+, toggled on mobile */}
+          <div className={`${showFilters ? "grid" : "hidden"} md:flex md:flex-wrap grid grid-cols-2 items-center gap-2`}>
             {/* Universal Search */}
-            <div className="relative flex-1 min-w-[140px]">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative flex-1 min-w-[150px]">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search everything..."
+                placeholder="Search company, SRF, make, technician..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all"
@@ -870,104 +957,95 @@ export default function QualityRecordView() {
               )}
             </div>
 
-            {/* Core Dia Search */}
-            <div className="relative shrink-0 w-24 sm:w-28">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Core Dia */}
+            <div className="relative w-full sm:w-[100px] md:w-[100px] shrink-0">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Core Dia"
                 value={searchCoreDia}
                 onChange={e => setSearchCoreDia(e.target.value)}
-                className="pl-8 pr-6 py-2 bg-amber-50/50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-700/50"
+                className="pl-7 pr-5 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-600/60"
               />
               {searchCoreDia && (
-                <button onClick={() => setSearchCoreDia("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
-                  <X size={13} />
+                <button onClick={() => setSearchCoreDia("")} className="absolute right-1 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
+                  <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Core Length Search */}
-            <div className="relative shrink-0 w-24 sm:w-28">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Core Length */}
+            <div className="relative w-full sm:w-[100px] md:w-[100px] shrink-0">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Core Len"
                 value={searchCoreLength}
                 onChange={e => setSearchCoreLength(e.target.value)}
-                className="pl-8 pr-6 py-2 bg-amber-50/50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-700/50"
+                className="pl-7 pr-5 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all font-semibold text-amber-900 placeholder:text-amber-600/60"
               />
               {searchCoreLength && (
-                <button onClick={() => setSearchCoreLength("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
-                  <X size={13} />
+                <button onClick={() => setSearchCoreLength("")} className="absolute right-1 top-1/2 -translate-y-1/2 text-amber-500 hover:text-amber-700">
+                  <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* Make Search */}
-            <div className="relative shrink-0 w-24 sm:w-28">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* Make */}
+            <div className="relative w-full sm:w-[100px] md:w-[100px] shrink-0">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Make"
                 value={searchMake}
                 onChange={e => setSearchMake(e.target.value)}
-                className="pl-8 pr-6 py-2 bg-blue-50/50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-700/50"
+                className="pl-7 pr-5 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-600/60"
               />
               {searchMake && (
-                <button onClick={() => setSearchMake("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
-                  <X size={13} />
+                <button onClick={() => setSearchMake("")} className="absolute right-1 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
+                  <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* HP Search */}
-            <div className="relative shrink-0 w-20 sm:w-24">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            {/* HP */}
+            <div className="relative w-full sm:w-[80px] md:w-[80px] shrink-0">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="HP"
                 value={searchHP}
                 onChange={e => setSearchHP(e.target.value)}
-                className="pl-8 pr-6 py-2 bg-blue-50/50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-700/50"
+                className="pl-7 pr-5 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs w-full outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all font-semibold text-blue-900 placeholder:text-blue-600/60"
               />
               {searchHP && (
-                <button onClick={() => setSearchHP("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
-                  <X size={13} />
+                <button onClick={() => setSearchHP("")} className="absolute right-1 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700">
+                  <X size={12} />
                 </button>
               )}
             </div>
 
             {/* Year Filter */}
-            <div className="relative shrink-0">
-              <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative w-full sm:w-auto shrink-0">
+              <Calendar size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
                 value={selectedYear}
                 onChange={e => setSelectedYear(e.target.value)}
-                className="pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none appearance-none cursor-pointer"
+                className="pl-7 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none appearance-none cursor-pointer w-full"
               >
                 {years.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
 
-            {/* Fix 8 — Bigger tap targets */}
-            {/* Bulk PDF */}
-            <button
-              onClick={generateBulkPDF}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-black text-white text-xs font-bold rounded-lg transition-all shadow-sm flex-1 sm:flex-none min-w-[90px]"
-            >
-              <Download size={14} />
-              <span className="hidden sm:inline">Export</span> {selectedYear === "All" ? "All" : selectedYear}
-            </button>
-
-            {/* Bulk Print */}
-            <button
-              onClick={() => handlePrint()}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-all shadow-sm flex-1 sm:flex-none min-w-[90px]"
-            >
-              <Printer size={14} />
-              <span className="hidden sm:inline">Print</span> {selectedYear === "All" ? "All" : selectedYear}
-            </button>
+            {/* Clear all filters */}
+            {(searchTerm || searchCoreDia || searchCoreLength || searchMake || searchHP || selectedYear !== "All") && (
+              <button
+                onClick={() => { setSearchTerm(""); setSearchCoreDia(""); setSearchCoreLength(""); setSearchMake(""); setSearchHP(""); setSelectedYear("All"); }}
+                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1 px-2.5 py-2 rounded-lg text-xs font-bold text-red-500 border border-red-200 bg-red-50 hover:bg-red-100 transition-all shrink-0"
+              >
+                <X size={12} /> Clear All
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -998,63 +1076,65 @@ export default function QualityRecordView() {
           filtered.map((rec) => {
             const isOpen = expandedId === rec._id;
             return (
-              <div key={rec._id} className="bg-white border border-slate-200 shadow-sm overflow-hidden transition-all">
+              <div key={rec._id} className="bg-white border border-slate-200 shadow-sm transition-all">
 
                 {/* ── CARD HEADER ── */}
                 <div
-                  className="flex items-start sm:items-center justify-between px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors select-none gap-2"
+                  className="flex items-start justify-between px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors select-none gap-2"
                   onClick={() => setExpandedId(isOpen ? null : rec._id)}
                 >
-                  <div className="flex items-start sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                  <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
                     {/* SRF Badge */}
-                    <div className="bg-blue-700 text-white text-[10px] font-black uppercase px-2 py-1 rounded shrink-0 mt-0.5 sm:mt-0">
+                    <div className="bg-blue-700 text-white text-[10px] font-black uppercase px-2 py-1 rounded shrink-0 mt-0.5 leading-tight">
                       #{rec.srfNumber || "N/A"}
                     </div>
                     {/* Company */}
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="font-black text-slate-900 text-xs sm:text-sm uppercase truncate">{rec.companyName || "—"}</p>
-                      <p className="text-[10px] text-slate-500 font-semibold mt-0.5 leading-snug">
-                        <span className="inline-block">Date: {fd(rec?.date)}</span>
-                        <span className="hidden sm:inline"> &nbsp;|&nbsp; GP: {fv(rec?.partyGPNumber)} &nbsp;|&nbsp; Make: {fv(rec?.inspectionTesting?.make)} &nbsp;|&nbsp; HP: {fv(rec?.inspectionTesting?.hp)}</span>
-                      </p>
-                      {/* Mobile-only second line */}
-                      <p className="text-[10px] text-slate-400 font-semibold sm:hidden mt-0.5">
-                        Make: {fv(rec?.inspectionTesting?.make)} | HP: {fv(rec?.inspectionTesting?.hp)}
-                      </p>
+                      <div className="text-[10px] text-slate-500 font-semibold mt-0.5 leading-snug space-y-0.5">
+                        <p>
+                          <span className="font-bold text-slate-600">Date:</span> {fd(rec?.date)}
+                          {rec?.partyGPNumber && <span className="ml-2"><span className="font-bold text-slate-600">GP:</span> {fv(rec?.partyGPNumber)}</span>}
+                        </p>
+                        <p>
+                          <span className="font-bold text-slate-600">Make:</span> {fv(rec?.inspectionTesting?.make)}
+                          <span className="ml-2"><span className="font-bold text-slate-600">HP:</span> {fv(rec?.inspectionTesting?.hp)}</span>
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Fix 8 — Larger tap targets for action buttons */}
-                  <div className="flex items-center gap-0.5 sm:gap-1 ml-1 shrink-0" onClick={e => e.stopPropagation()}>
+                  {/* Action buttons — larger tap targets for mobile */}
+                  <div className="flex items-center gap-0.5 ml-1 shrink-0" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => generateSinglePDF(rec)}
                       title="Download PDF"
-                      className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+                      className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all active:scale-95"
                     >
                       <FileDown size={16} />
                     </button>
                     <button
                       onClick={() => handlePrint(rec)}
                       title="Print Record"
-                      className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+                      className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all active:scale-95"
                     >
                       <Printer size={16} />
                     </button>
                     <button
                       onClick={() => navigate("/admin/quality-records", { state: { editData: rec } })}
                       title="Edit Record"
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all hidden sm:block"
+                      className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all active:scale-95"
                     >
                       <Edit3 size={16} />
                     </button>
                     <button
                       onClick={() => handleDelete(rec._id)}
                       title="Delete Record"
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                      className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all active:scale-95"
                     >
                       <Trash2 size={16} />
                     </button>
-                    <div className="ml-1 text-slate-400">
+                    <div className="ml-0.5 text-slate-400">
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </div>
@@ -1063,34 +1143,58 @@ export default function QualityRecordView() {
                 {/* ── EXPANDED FULL REPORT ── */}
                 {isOpen && (
                   <div className="border-t border-slate-200">
-                    {/* Expand action bar */}
-                    <div className="flex flex-wrap items-center justify-between px-2 sm:px-4 py-2 bg-slate-50 border-b border-slate-200 gap-2">
+
+                    {/* Action toolbar */}
+                    <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 py-2.5 bg-slate-50 border-b border-slate-200 gap-2">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Inspection Report</p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => generateSinglePDF(rec)}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all active:scale-95"
                         >
-                          <FileDown size={13} /> <span className="hidden sm:inline">Download</span> PDF
+                          <FileDown size={13} /> PDF
                         </button>
                         <button
                           onClick={() => handlePrint(rec)}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white text-xs font-bold rounded hover:bg-amber-600 transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-all active:scale-95"
                         >
                           <Printer size={13} /> Print
                         </button>
                         <button
                           onClick={() => navigate("/admin/quality-records", { state: { editData: rec } })}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-all sm:hidden"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all active:scale-95"
                         >
                           <Edit3 size={13} /> Edit
                         </button>
                       </div>
                     </div>
-                    {/* Fix 6 — overflow-x-auto on full report */}
+
+                    {/* Mobile scroll hint */}
+                    <div className="sm:hidden flex items-center justify-center gap-1.5 py-1.5 bg-blue-50 border-b border-blue-100">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-blue-400">
+                        <path d="M18 8L22 12L18 16" /><path d="M2 12H22" />
+                      </svg>
+                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Scroll to explore all sections</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-blue-400">
+                        <path d="M6 8L2 12L6 16" /><path d="M22 12H2" />
+                      </svg>
+                    </div>
+
+                    {/* Full report — plain overflow-x-auto; vertical scroll is the natural page scroll */}
                     <div className="overflow-x-auto">
                       <FullReport rec={rec} />
                     </div>
+
+                    {/* Mobile bottom close hint */}
+                    <div
+                      className="sm:hidden flex items-center justify-center gap-2 py-2.5 bg-slate-50 border-t border-slate-200 cursor-pointer active:bg-slate-100 transition-colors"
+                      onClick={() => setExpandedId(null)}
+                    >
+                      <ChevronUp size={14} className="text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Collapse Report</span>
+                      <ChevronUp size={14} className="text-slate-400" />
+                    </div>
+
                   </div>
                 )}
               </div>

@@ -7,7 +7,7 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex overflow-x-hidden">
+    <div className="min-h-screen bg-gray-100 flex">
 
       {/* SIDEBAR */}
       <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
@@ -18,8 +18,9 @@ export default function AdminLayout() {
         {/* NAVBAR */}
         <AdminNavbar toggleSidebar={() => setSidebarOpen(true)} />
 
-        {/* PAGE CONTENT */}
-        <main className="flex-1 pt-16 p-3 sm:p-4 md:p-6 overflow-y-auto overflow-x-hidden">
+        {/* PAGE CONTENT — overflow-auto allows both vertical AND horizontal scroll.
+            overflow-x-hidden was previously blocking all horizontal scroll on mobile. */}
+        <main className="flex-1 pt-16 p-3 sm:p-4 md:p-6 overflow-y-auto overflow-x-auto">
           <Outlet />
         </main>
 
